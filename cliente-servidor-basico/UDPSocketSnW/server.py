@@ -1,47 +1,70 @@
-import socket
+import logging
 import threading
-import struct
+from math import ceil
+from logging import debug as db
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from UDPSocketSnW import UDPSocketSnW as UDPSocket
 
-# Multithreaded Python server : UDP Server Socket Program Stub
-UDP_IP = '127.0.0.1'
-UDP_PORT = 2001
-BUFFER_SIZE = 2000  # Usually 1024, but we need quick response
+def log(msg):
+    db(f'[Server] {msg}')
 
-#server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#server_socket.bind((UDP_IP, UDP_PORT))
-server_socket = UDPSocket(None)
-server_socket.bind((UDP_IP, UDP_PORT))
+class Server:
 
-#while True:
-print("inicio")
-#server_socket.listen(1)
-#print("Multithreaded Python server : Waiting for connections from UDP clients...")
-mensaje = server_socket.receive()
-print(f'recibimos peticion: {mensaje.decode()}')
-# aca se hace el branch a un nuevo thread/socket para este nuevo cliente
+    def __init__(self):
+        log('(start)')
+        UDP_IP = '127.0.0.1'
+        UDP_PORT = 2001
+    
+        self.socket = UDPSocket(None)
+        self.socket.bind((UDP_IP, UDP_PORT))
+        self.connections = []
+        self.run()
 
-# enviamos ACK al cliente
-#print('enviamos ACK')
-#server_socket.send('ACK'.encode())#,address)
+    def run(self):
+        log('(run)')
+        log('Escuchando')
+        mensaje,address = self.socket.receive()
+        self.socket.address = address
+        payload = mensaje.decode()
+        log(f'Recibimos peticion: {payload}')
+        # aca se hace el branch a un nuevo thread/socket para este nuevo cliente
 
+        l = payload.split('|')
 
-# loop para recibir los datos
-print('recibimos mas datos')
-while True:
-    mensaje = server_socket.receive()
-    print(f'recibimos: {mensaje.decode()}')
+        log(f'Tipo operacion: {l[1]}')
+        log(f'Nombre archivo: {l[2]}')
+        log(f'Tamanio del archivo: {l[3]}')
+        log(f'Tamanio de mensaje: {l[4]}')
 
-    # recibir mensajes hasta que llegue FIN
-    if f'{mensaje.decode()}' == 'FIN':
-        # enviar ACK
-        server_socket.send('FINACK'.encode())#,address)
-        break
+        log('Aceptamos peticion. Enviamos CONECTADO')
+        self.socket.send('CONECTADO'.encode())
+        
+        log('Esperamos recibir mas datos:')
+        with open('server_'+l[2],'wb') as archivo:
+            for i in range(ceil(int(l[3])/self.socket.buffer_size)):
+                log(f'Recibiendo...{i}')
+                mensaje,address = self.socket.receive()
+                log(f'Recibimos: {mensaje}')
+                log(f'De: {address}')
+                archivo.write(mensaje)
+                
+                #log('enviamos ACK')
+                #self.socket.send('ACK'.encode())
+            
+        log('Fin del archivo')
 
-    print('enviamos ACK')
-    server_socket.send('ACK'.encode())
+        log('Esperamos FIN')
+        mensaje,address = self.socket.receive()
+        # recibir mensajes hasta que llegue FIN
+        if f'{mensaje.decode()}' == 'FIN':
+            log('Enviavos FINACK')
+            self.socket.send('FINACK'.encode())
 
-# esperamos ACK final del cliente
-mensaje = server_socket.receive()
-print(f'{mensaje.decode()}')
+        log('Esperamos ACK')
+        # esperamos ACK final del cliente
+        mensaje,address = self.socket.receive()
+        log(f'Recibimos :{mensaje.decode()}')
 
+        log('Fin server')
+    
+Server()
