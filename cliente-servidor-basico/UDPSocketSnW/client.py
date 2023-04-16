@@ -14,7 +14,7 @@ class Client:
         self.server_address = "127.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address,self.server_port))
-        print('socket creado')
+        log('Socket creado')
         self.run()
 
     def run(self):
@@ -36,7 +36,7 @@ class Client:
 
         log('Esperando respuesta del Servidor')
         log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
-        mensaje,address = self.socket.receive()
+        mensaje, address = self.socket.receive()
         log(f'Respuesta del servidor: {mensaje.decode()}')
 
         if mensaje.decode() != 'CONECTADO':
@@ -46,15 +46,11 @@ class Client:
         log('Continuamos en el upload')
         with open(nombre_archivo,'rb') as archivo:
             log(f'Abriendo archivo: {nombre_archivo}')
-            # El 8 de aca abajo esta hardcodeado, es el tamaño del header
-            iters = ceil(tamanio_archivo/(self.socket.buffer_size-8))
-            #while True: # cabiar por un for
+            header_size = 8
+            iters = ceil(tamanio_archivo/(self.socket.buffer_size-header_size))
             for i in range(iters):
-                log(f'Leer {self.socket.buffer_size-8}B {i}/{iters}')
-                bytes = archivo.read(self.socket.buffer_size-8) 
-                #if not bytes:
-                #    log('Fin del archivo!')
-                #    break
+                log(f'Leer {self.socket.buffer_size-header_size}B {i}/{iters}')
+                bytes = archivo.read(self.socket.buffer_size-header_size) 
                 
                 payload = '|'+str(bytes)+'|'+str(len(bytes))+'|'
                 log(f'Mensaje: {payload}')
@@ -62,31 +58,25 @@ class Client:
                 self.socket.send(payload.encode())
                 log('Enviado!')
 
-                # esperamos respuesta del server
-                #print('esperamos respuesta del server ')
-                #mensaje = socket.receive()
-                #print(f'respuesta del server: {mensaje.decode()}')
-
             log('Cerrar archivo')
-
-        #self.socket.send()
 
         log('Fin de la transmision del archivo')
         log('Comenzamos cierre de conexion')
 
         # enviamos FIN
-        log('enviamos FIN al servidor')
+        log('Enviamos FIN al servidor')
         #socket.close()
+
         payload = 'FIN'
         self.socket.send(payload.encode())
 
         # esperamos FINACK
         mensaje,address = self.socket.receive()
-        print(f'recibimos: {mensaje.decode()}')
+        print(f'Recibimos: {mensaje.decode()}')
 
-        print('enviamos ACK')
+        print('Enviamos ACK')
         self.socket.send('ACK'.encode())
 
-        print('fin del cliente')
+        print('Fin del cliente')
 
 Client()
