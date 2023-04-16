@@ -3,6 +3,10 @@ import struct
 import logging
 from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+from random import random
+
+PACKET_LOSS=0.3
+
 
 def log(msg):
     db(f'[UdpSkt] {msg}')
@@ -16,6 +20,7 @@ class UDPSocketSnW:
         self.sequence_number = 0
         self.expected_sequence_num = 0
         self.buffer_size = 1024
+        self.COUNTER=0
 
     def send(self, data):
         log(f'(send-estado) seq_num: {self.sequence_number}')
@@ -29,10 +34,19 @@ class UDPSocketSnW:
         self.socket.sendto(packet, self.address)
 
         log('(send) Esperando ACK (bucle)')
-        _intentos = 4
+        _intentos = 400
         for i in range(_intentos):
             log(f'(send-ack-loop) Intento: {i+1}/{_intentos}')
             try:
+                ''' SIMULACION DE PERDIDA DE PAQUETES '''
+                p = random()
+                if p<PACKET_LOSS:
+                    log(f'(send) PACKET_LOSS con prob: {p}')
+                    self.COUNTER+=1
+                    log(f'PAQUETES PERDIDOS: {self.COUNTER}')
+                    return
+                ''' SIMULACION DE PERDIDA DE PAQUETES '''
+
                 log('(send-ack-loop) Iniciar timer')
                 self.socket.settimeout(1.0)
                 log('(send-ack-loop) Recibir respuesta (ACK Hopefully)')
@@ -44,6 +58,7 @@ class UDPSocketSnW:
                 if ack_sequence_number == self.expected_sequence_num:
                     self.expected_sequence_num += 1
                     self.sequence_number += 1
+                    log(f'(send-ack-loop) Incrementar sequence_number a: {self.sequence_number}')
                     log(f'(send-ack-loop) Incrementar expected_sequence_num a: {self.expected_sequence_num}')
                     break
 
@@ -75,7 +90,7 @@ class UDPSocketSnW:
             log(f'(recv) Enviado')
             self.expected_sequence_num += 1
             self.sequence_number += 1
-            log(f'(recv) OK. Incrementar expected_seq_num a: {self.expected_sequence_num}')
+            log(f'(recv) OK. Incrementar secuencia')
 
         log('(recv) fin recv')
         return data[8:],address
