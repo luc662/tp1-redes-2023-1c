@@ -1,5 +1,6 @@
 import os
 import logging
+from math import ceil
 from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from UDPSocketSnW import UDPSocketSnW as UDPSocket
@@ -18,7 +19,7 @@ class Client:
 
     def run(self):
         log('(run)')
-        nombre_archivo = 'test.txt'
+        nombre_archivo = 'file.txt'
         log(f'archivo: {nombre_archivo}')
 
         # obtener tamaño del archivo
@@ -45,12 +46,15 @@ class Client:
         log('Continuamos en el upload')
         with open(nombre_archivo,'rb') as archivo:
             log(f'Abriendo archivo: {nombre_archivo}')
-            while True:
-                log('Leer 64B')
-                bytes = archivo.read(64) # 64 bytes
-                if not bytes:
-                    log('Fin del archivo!')
-                    break
+            # El 8 de aca abajo esta hardcodeado, es el tamaño del header
+            iters = ceil(tamanio_archivo/(self.socket.buffer_size-8))
+            #while True: # cabiar por un for
+            for i in range(iters):
+                log(f'Leer {self.socket.buffer_size-8}B {i}/{iters}')
+                bytes = archivo.read(self.socket.buffer_size-8) 
+                #if not bytes:
+                #    log('Fin del archivo!')
+                #    break
                 
                 payload = '|'+str(bytes)+'|'+str(len(bytes))+'|'
                 log(f'Mensaje: {payload}')
