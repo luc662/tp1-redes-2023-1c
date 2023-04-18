@@ -1,77 +1,72 @@
 import os
 import logging
 from math import ceil
-from logging import debug as db
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-from UDPSocketSnW import UDPSocketSnW as UDPSocket
-
-def log(msg):
-    db(f'[Client] {msg}')
+from UDPSocketSnW import UDPSocketSnW
 
 class Client:
     def __init__(self):
-        log('(start)')
+        logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+        logging.debug('(start)')
         self.server_address = "127.0.0.1"
         self.server_port = 2001
-        self.socket = UDPSocket((self.server_address,self.server_port))
-        log('Socket creado')
+        self.socket = UDPSocketSnW((self.server_address, self.server_port))
+        logging.debug('Socket creado')
         self.run()
 
     def run(self):
-        log('(run)')
+        logging.debug('(run)')
         nombre_archivo = 'file.txt'
-        log(f'archivo: {nombre_archivo}')
+        logging.debug(f'archivo: {nombre_archivo}')
 
         # obtener tamaño del archivo
         tamanio_archivo = os.stat(nombre_archivo).st_size
-        log(f'El tamanio del archivo es: {tamanio_archivo}')
-        log(f'Armando mensaje de capa de app:')
-        mensaje = '|upload|'+nombre_archivo+'|'+str(tamanio_archivo)+'|'
-        tamanio_mensaje = str(len(mensaje))
-        payload = f'{mensaje,tamanio_mensaje}'
-        log(f'Mensaje: {payload}')
-        log('Enviando')
-        self.socket.send(payload.encode())
-        log('Enviado!')
+        logging.debug(f'El tamanio del archivo es: {tamanio_archivo}')
+        logging.debug(f'Armando mensaje de capa de app:')
+        mensaje = f'upload|{nombre_archivo}|{str(tamanio_archivo)}'
+        mensaje += f'|{str(len(mensaje))}'
+        logging.debug(f'Mensaje: {mensaje}')
+        logging.debug('Enviando')
+        self.socket.send(mensaje.encode())
+        logging.debug('Enviado!')
 
-        log('Esperando respuesta del Servidor')
-        log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
+        logging.debug('Esperando respuesta del Servidor')
+        logging.debug('Esperamos que nos diga CONECTADO (a nivel capa de app)')
         mensaje, address = self.socket.receive()
-        log(f'Respuesta del servidor: {mensaje.decode()}')
+        logging.debug(f'Respuesta del servidor: {mensaje.decode()}')
 
         if mensaje.decode() != 'CONECTADO':
-            log('No llego el CONECTADO del servidor')
+            logging.debug('No llego el CONECTADO del servidor')
             exit()
 
-        log('Continuamos en el upload')
+        logging.debug('Continuamos en el upload')
         with open(nombre_archivo,'rb') as archivo:
-            log(f'Abriendo archivo: {nombre_archivo}')
+            logging.debug(f'Abriendo archivo: {nombre_archivo}')
             header_size = 8
             iters = ceil(tamanio_archivo/(self.socket.buffer_size-header_size))
             for i in range(iters):
-                log(f'Leer {self.socket.buffer_size-header_size}B {i}/{iters}')
+                logging.debug(f'Leer {self.socket.buffer_size-header_size}B {i}/{iters}')
                 bytes = archivo.read(self.socket.buffer_size-header_size) 
                 
                 payload = '|'+str(bytes)+'|'+str(len(bytes))+'|'
-                log(f'Mensaje: {payload}')
-                log('Enviando')
+                logging.debug(f'Mensaje: {payload}')
+                logging.debug('Enviando')
                 self.socket.send(payload.encode())
-                log('Enviado!')
+                logging.debug('Enviado!')
 
-            log('Cerrar archivo')
+            logging.debug('Cerrar archivo')
 
-        log('Fin de la transmision del archivo')
-        log('Comenzamos cierre de conexion')
+        logging.debug('Fin de la transmision del archivo')
+        logging.debug('Comenzamos cierre de conexion')
 
         # enviamos FIN
-        log('Enviamos FIN al servidor')
+        logging.debug('Enviamos FIN al servidor')
         #socket.close()
 
         payload = 'FIN'
         self.socket.send(payload.encode())
 
         # esperamos FINACK
-        mensaje,address = self.socket.receive()
+        mensaje, address = self.socket.receive()
         print(f'Recibimos: {mensaje.decode()}')
 
         print('Enviamos ACK')

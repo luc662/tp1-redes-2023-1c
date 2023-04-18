@@ -1,78 +1,66 @@
 import logging
 import threading
 from math import ceil
-from logging import debug as db
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-from UDPSocketSnW import UDPSocketSnW as UDPSocket
-
-def log(msg):
-    db(f'[Server] {msg}')
+from UDPSocketSnW import UDPSocketSnW
 
 class Server:
 
     def __init__(self):
-        log('(start)')
+        logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+        logging.debug('(start)')
         UDP_IP = '127.0.0.1'
         UDP_PORT = 2001
     
-        self.socket = UDPSocket(None)
+        self.socket = UDPSocketSnW(None)
         self.socket.bind((UDP_IP, UDP_PORT))
         self.connections = []
         self.run()
 
     def run(self):
-        log('(run)')
-        log('Escuchando')
-        mensaje,address = self.socket.receive()
+        logging.debug('(run)')
+        logging.debug('Escuchando')
+        mensaje, address = self.socket.receive()
         self.socket.address = address
         payload = mensaje.decode()
-        log(f'Recibimos peticion: {payload}')
+        logging.debug(f'Recibimos peticion: {payload}')
         # aca se hace el branch a un nuevo thread/socket para este nuevo cliente
 
         l = payload.split('|')
-        tipo_operacion = l[1]
-        nombre_archivo = l[2]
-        tamanio_archivo = l[3]
+        tipo_operacion = l[0]
+        nombre_archivo = l[1]
+        tamanio_archivo = l[2]
 
-        log(f'Tipo operacion: {tipo_operacion}')
-        log(f'Nombre archivo: {nombre_archivo}')
-        log(f'Tamanio del archivo: {tamanio_archivo}')
-        log(f'Tamanio de mensaje: {l[4]}')
+        logging.debug(f'Tipo operacion: {tipo_operacion}')
+        logging.debug(f'Nombre archivo: {nombre_archivo}')
+        logging.debug(f'Tamanio del archivo: {tamanio_archivo}')
+        logging.debug(f'Tamanio de mensaje: {l[3]}')
 
-        log('Aceptamos peticion. Enviamos CONECTADO')
+        logging.debug('Aceptamos peticion. Enviamos CONECTADO')
         self.socket.send('CONECTADO'.encode())
         
-        log('Esperamos recibir mas datos:')
-        with open('server_'+l[2],'wb') as archivo:
-            # espero recibir tamanio_archivo Bytes
-            # cuantas iteraciones hago?
-            # - leo de a buffer_size
+        logging.debug('Esperamos recibir mas datos:')
+        with open(f'server_{nombre_archivo}','wb') as archivo:
             iters = ceil(int(tamanio_archivo)/(self.socket.buffer_size-8))
             for i in range(iters):
-                log(f'Recibiendo... {i+1}/{iters}')
+                logging.debug(f'Recibiendo... {i+1}/{iters}')
                 mensaje, address = self.socket.receive()
-                log(f'Recibimos: {mensaje}')
-                log(f'De: {address}')
-                log(f'---- SIZE: {len(mensaje)}')
+                logging.debug(f'Recibimos: {mensaje}')
+                logging.debug(f'De: {address}')
+                logging.debug(f'Tamanio: {len(mensaje)}')
                 archivo.write(mensaje)
-                
-                #log('enviamos ACK')
-                #self.socket.send('ACK'.encode())
             
-        log('Fin del archivo')
+        logging.debug('Fin del archivo')
 
-        log('Esperamos FIN')
-        mensaje,address = self.socket.receive()
-        # recibir mensajes hasta que llegue FIN
+        logging.debug('Esperamos FIN')
+        mensaje, address = self.socket.receive()
         if f'{mensaje.decode()}' == 'FIN':
-            log('Enviavos FINACK')
+            logging.debug('Enviavos FINACK')
             self.socket.send('FINACK'.encode())
 
-        log('Esperamos ACK')
-        # esperamos ACK final del cliente
-        mensaje,address = self.socket.receive()
-        log(f'Recibimos :{mensaje.decode()}')
+        logging.debug('Esperamos ACK')
+        mensaje, address = self.socket.receive()
+        logging.debug(f'Recibimos: {mensaje.decode()}')
 
-        log('Fin server')
+        logging.debug('Fin server')
     
 Server()
