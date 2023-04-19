@@ -22,7 +22,8 @@ class UDPSocketSnW:
         self.sequence_number = 0
         self.expected_sequence_num = 0
         self.buffer_size = 1024
-        self.COUNTER = 0
+        self.send_retries = 10
+        self.packet_loss_counter = 0
 
     def send(self, data):
         log(f'(send-estado) seq_num: {self.sequence_number}')
@@ -36,12 +37,10 @@ class UDPSocketSnW:
         self.socket.sendto(packet, self.address)
 
         log('(send) Esperando ACK (bucle)')
-        _intentos = 400
-        for i in range(_intentos):
-            log(f'(send-ack-loop) Intento: {i + 1}/{_intentos}')
+        for i in range(self.send_retries):
+            log(f'(send-ack-loop) Intento: {i + 1}/{self.send_retries}')
 
-
-            log('(send-ack-loop) Iniciar timer')
+            log('(send-ack-loop) Iniciar timer (1s)')
             self.socket.settimeout(1.0)
             log('(send-ack-loop) Recibir respuesta (ACK Hopefully)')
 
@@ -78,14 +77,14 @@ class UDPSocketSnW:
         log(f'(recv) seq_num: {sequence_number}')
         log(f'(recv) expected_seq_num: {expected_seq_number}')
         log(f'(recv) payload: {data[8:]}')
-        # SIMULACION DE PERDIDA DE PAQUETES ack
+        ## SIMULACION DE PERDIDA DE PAQUETES ack
         #p = random()
         #if p < PACKET_LOSS:
         #    log(f'(RECV) PACKET_LOSS con prob: {p}')
-        #    self.COUNTER += 1
-        #    log(f'PAQUETES PERDIDOS: {self.COUNTER}')
+        #    self.packet_loss_counter += 1
+        #    log(f'PAQUETES PERDIDOS: {self.packet_loss_counter}')
         #    return None, address
-        # SIMULACION DE PERDIDA DE PAQUETES
+        ## SIMULACION DE PERDIDA DE PAQUETES
 
         log(f'(recv) Enviar ACK')
         ack_packet = struct.pack('II', sequence_number, self.expected_sequence_num)
