@@ -30,23 +30,21 @@ class Server:
         # aca se hace el branch a un nuevo thread/socket para este nuevo cliente
 
         l = payload.split('|')
-        tipo_operacion = l[1]
-        nombre_archivo = l[2]
-        tamanio_archivo = l[3]
+        tipo_operacion = l[0]
+        nombre_archivo = l[1]
+        tamanio_archivo = l[2]
+        tamanio_paquete = l[3]
 
         log(f'Tipo operacion: {tipo_operacion}')
         log(f'Nombre archivo: {nombre_archivo}')
         log(f'Tamanio del archivo: {tamanio_archivo}')
-        log(f'Tamanio de mensaje: {l[4]}')
+        log(f'Tamanio de paquete: {tamanio_paquete}')
 
         log('Aceptamos peticion. Enviamos CONECTADO')
         self.socket.send('CONECTADO'.encode())
         
         log('Esperamos recibir mas datos:')
-        with open('server_'+l[2],'wb') as archivo:
-            # espero recibir tamanio_archivo Bytes
-            # cuantas iteraciones hago?
-            # - leo de a buffer_size
+        with open(f'server_{nombre_archivo}','wb') as archivo:
             iters = ceil(int(tamanio_archivo)/(self.socket.buffer_size-8))
             for i in range(iters):
                 log(f'Recibiendo... {i+1}/{iters}')
@@ -56,12 +54,10 @@ class Server:
                     if mensaje:
                         log(f'Recibimos: {mensaje}')
                         log(f'De: {address}')
-                        log(f'---- SIZE: {len(mensaje)}')
+                        log(f'Tamanio: {len(mensaje)}')
                         archivo.write(mensaje)
                         break
                     # sino pregunto por el mismo archivo
-                #log('enviamos ACK')
-                #self.socket.send('ACK'.encode())
             
         log('Fin del archivo')
 
@@ -75,7 +71,7 @@ class Server:
         log('Esperamos ACK')
         # esperamos ACK final del cliente
         mensaje,address = self.socket.receive()
-        log(f'Recibimos :{mensaje.decode()}')
+        log(f'Recibimos: {mensaje.decode()}')
 
         log('Fin server')
     
