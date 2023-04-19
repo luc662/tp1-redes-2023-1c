@@ -25,15 +25,15 @@ class Client:
         log(f'archivo: {nombre_archivo}')
 
         # obtener tamaño del archivo
+        operacion = 'upload'
         tamanio_archivo = os.stat(nombre_archivo).st_size
         log(f'El tamanio del archivo es: {tamanio_archivo}')
         log(f'Armando mensaje de capa de app:')
-        mensaje = '|upload|' + nombre_archivo + '|' + str(tamanio_archivo) + '|'
-        tamanio_mensaje = str(len(mensaje))
-        payload = f'{mensaje, tamanio_mensaje}'
-        log(f'Mensaje: {payload}')
+        mensaje = f'{operacion}|{nombre_archivo}|{str(tamanio_archivo)}'
+        mensaje += f'|{str(len(mensaje))}'
+        log(f'Mensaje: {mensaje}')
         log('Enviando')
-        self.socket.send(payload.encode())
+        self.socket.send(mensaje.encode())
         log('Enviado!')
 
         log('Esperando respuesta del Servidor')
@@ -54,10 +54,10 @@ class Client:
                 log(f'Leer {self.socket.buffer_size - header_size}B {i}/{iters}')
                 bytes = archivo.read(self.socket.buffer_size - header_size)
                 log(f'leo: {bytes.decode()}')
-                payload = '|' + bytes.decode() + '|' + str(len(bytes)) + '|'
-                log(f'Mensaje: {payload}')
+                #payload = f'{bytes.decode()}|{str(len(bytes))}'
+                log(f'Mensaje: {bytes.decode()}')
                 log('Enviando')
-                self.socket.send(payload.encode())
+                self.socket.send(bytes)
                 log('Enviado!')
 
             log('Cerrar archivo')
