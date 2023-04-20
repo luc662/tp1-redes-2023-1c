@@ -18,10 +18,11 @@ class Client:
         self.socket = UDPSocket((self.server_address, self.server_port))
         self.filename = 'test.txt'
         log('Socket creado')
-        self.run()
+        self.download()
 
     def download(self):
         operacion = 'download'
+        self.filename = 'server_test.txt'
         mensaje = f'{operacion}|{self.filename}'
         self.socket.send(mensaje.encode())
 
@@ -32,20 +33,19 @@ class Client:
 
         assert self.filename == filename
 
-        with open(self.filename, 'wb') as archivo:
+        with open(f'client_{self.filename}', 'wb') as archivo:
             log(f'Abriendo archivo: {self.filename}')
-            header_size = 8
-            iters = ceil(filesize / (self.socket.buffer_size - header_size))
+            iters = ceil(int(filesize) / (self.socket.buffer_size - self.socket.header_size))
             for i in range(iters):
-                while True:
-                    mensaje, address = self.socket.recieve()
-                    # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
-                    if mensaje:
-                        log(f'Recibimos: {mensaje}')
-                        log(f'De: {address}')
-                        log(f'Tamanio: {len(mensaje)}')
-                        archivo.write(mensaje)
-                        break
+                log(f'Recibiendo: {i+1}/{iters}')
+                mensaje, address = self.socket.recieve()
+                # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
+                log(f'Recibimos: {mensaje}')
+                log(f'De: {address}')
+                log(f'Tamanio: {len(mensaje)}')
+                if mensaje:
+                    archivo.write(mensaje)
+                    break
             log('Cerrar archivo')
         # enviamos FIN
         log('Enviamos FIN al servidor')
@@ -55,9 +55,10 @@ class Client:
         self.socket.send(payload.encode())
 
         # esperamos FINACK
+        #while True:
         mensaje, address = self.socket.recieve()
         print(f'Recibimos: {mensaje.decode()}')
-
+        
         print('Enviamos ACK')
         self.socket.send('ACK'.encode())
 
@@ -66,7 +67,6 @@ class Client:
 
     def run(self):
         log('(run)')
-        #self.filename = 'test.txt'
         log(f'archivo: {self.filename}')
 
         # obtener tamaño del archivo
@@ -93,11 +93,10 @@ class Client:
         log('Continuamos en el upload')
         with open(self.filename, 'rb') as archivo:
             log(f'Abriendo archivo: {self.filename}')
-            header_size = 8
-            iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
+            iters = ceil(tamanio_archivo / (self.socket.buffer_size - self.socket.header_size))
             for i in range(iters):
-                log(f'Leer {self.socket.buffer_size - header_size}B {i}/{iters}')
-                bytes = archivo.read(self.socket.buffer_size - header_size)
+                log(f'Leer {self.socket.buffer_size - self.socket.header_size}B {i}/{iters}')
+                bytes = archivo.read(self.socket.buffer_size - self.socket.header_size)
                 log(f'leo: {bytes.decode()}')
                 #payload = f'{bytes.decode()}|{str(len(bytes))}'
                 log(f'Mensaje: {bytes.decode()}')

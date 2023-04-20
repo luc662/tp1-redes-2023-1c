@@ -8,10 +8,8 @@ from random import random
 
 PACKET_LOSS = 0.3
 
-
 def log(msg):
     db(f'[UdpSkt] {msg}')
-
 
 class UDPSocketSnW:
 
@@ -22,6 +20,7 @@ class UDPSocketSnW:
         self.sequence_number = 0
         self.expected_sequence_num = 0
         self.buffer_size = 1024
+        self.header_size = 8
         self.send_retries = 10
         self.packet_loss_counter = 0
 
