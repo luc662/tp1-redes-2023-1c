@@ -66,7 +66,7 @@ class UDPSocketSnW:
 
         log('(send) fin send')
 
-    def receive(self):
+    def recieve(self):
         self.socket.settimeout(None)
         log(f'(recv-estado) seq_num: {self.sequence_number}')
         log(f'(recv-estado) expected_seq_num: {self.expected_sequence_num}')
@@ -109,7 +109,7 @@ class UDPSocketSnW:
     def close(self):
         self.send()
 
-        self.receive()
+        self.recieve()
         if self.bit_ACK == 1 and self.bit_FIN == 1:
             self.send()
         else:

@@ -16,20 +16,65 @@ class Client:
         self.server_address = "127.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
+        self.filename = 'test.txt'
         log('Socket creado')
         self.run()
 
+    def download(self):
+        operacion = 'download'
+        mensaje = f'{operacion}|{self.filename}'
+        self.socket.send(mensaje.encode())
+
+        mensaje, address = self.socket.recieve()
+        log(f'Mensaje: {mensaje.decode()}')
+        # CONECTADO|filename|filesize
+        status, filename, filesize = mensaje.decode().split('|')
+
+        assert self.filename == filename
+
+        with open(self.filename, 'wb') as archivo:
+            log(f'Abriendo archivo: {self.filename}')
+            header_size = 8
+            iters = ceil(filesize / (self.socket.buffer_size - header_size))
+            for i in range(iters):
+                while True:
+                    mensaje, address = self.socket.recieve()
+                    # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
+                    if mensaje:
+                        log(f'Recibimos: {mensaje}')
+                        log(f'De: {address}')
+                        log(f'Tamanio: {len(mensaje)}')
+                        archivo.write(mensaje)
+                        break
+            log('Cerrar archivo')
+        # enviamos FIN
+        log('Enviamos FIN al servidor')
+        # socket.close()
+
+        payload = 'FIN'
+        self.socket.send(payload.encode())
+
+        # esperamos FINACK
+        mensaje, address = self.socket.recieve()
+        print(f'Recibimos: {mensaje.decode()}')
+
+        print('Enviamos ACK')
+        self.socket.send('ACK'.encode())
+
+        print('Fin del cliente')
+            
+
     def run(self):
         log('(run)')
-        nombre_archivo = 'test.txt'
-        log(f'archivo: {nombre_archivo}')
+        #self.filename = 'test.txt'
+        log(f'archivo: {self.filename}')
 
         # obtener tamaño del archivo
         operacion = 'upload'
-        tamanio_archivo = os.stat(nombre_archivo).st_size
+        tamanio_archivo = os.stat(self.filename).st_size
         log(f'El tamanio del archivo es: {tamanio_archivo}')
         log(f'Armando mensaje de capa de app:')
-        mensaje = f'{operacion}|{nombre_archivo}|{str(tamanio_archivo)}'
+        mensaje = f'{operacion}|{self.filename}|{str(tamanio_archivo)}'
         mensaje += f'|{str(len(mensaje))}'
         log(f'Mensaje: {mensaje}')
         log('Enviando')
@@ -38,7 +83,7 @@ class Client:
 
         log('Esperando respuesta del Servidor')
         log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
-        mensaje, address = self.socket.receive()
+        mensaje, address = self.socket.recieve()
         log(f'Respuesta del servidor: {mensaje.decode()}')
 
         if mensaje.decode() != 'CONECTADO':
@@ -46,8 +91,8 @@ class Client:
             exit()
 
         log('Continuamos en el upload')
-        with open(nombre_archivo, 'rb') as archivo:
-            log(f'Abriendo archivo: {nombre_archivo}')
+        with open(self.filename, 'rb') as archivo:
+            log(f'Abriendo archivo: {self.filename}')
             header_size = 8
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
             for i in range(iters):
@@ -73,7 +118,7 @@ class Client:
         self.socket.send(payload.encode())
 
         # esperamos FINACK
-        mensaje, address = self.socket.receive()
+        mensaje, address = self.socket.recieve()
         print(f'Recibimos: {mensaje.decode()}')
 
         print('Enviamos ACK')

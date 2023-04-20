@@ -20,10 +20,12 @@ class Server:
         self.connections = []
         self.run()
 
-    def run(self):
+    def download(self):
+
+    def listen(self):
         log('(run)')
         log('Escuchando')
-        mensaje, address = self.socket.receive()
+        mensaje, address = self.socket.recieve()
         self.socket.address = address
         payload = mensaje.decode()
         log(f'Recibimos peticion: {payload}')
@@ -40,6 +42,9 @@ class Server:
         log(f'Tamanio del archivo: {tamanio_archivo}')
         log(f'Tamanio de paquete: {tamanio_paquete}')
 
+    def run(self):
+        
+
         log('Aceptamos peticion. Enviamos CONECTADO')
         self.socket.send('CONECTADO'.encode())
         
@@ -49,7 +54,7 @@ class Server:
             for i in range(iters):
                 log(f'Recibiendo... {i+1}/{iters}')
                 while True:
-                    mensaje, address = self.socket.receive()
+                    mensaje, address = self.socket.recieve()
                     # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
                     if mensaje:
                         log(f'Recibimos: {mensaje}')
@@ -62,7 +67,7 @@ class Server:
         log('Fin del archivo')
 
         log('Esperamos FIN')
-        mensaje,address = self.socket.receive()
+        mensaje,address = self.socket.recieve()
         # recibir mensajes hasta que llegue FIN
         if f'{mensaje.decode()}' == 'FIN':
             log('Enviavos FINACK')
@@ -70,7 +75,7 @@ class Server:
 
         log('Esperamos ACK')
         # esperamos ACK final del cliente
-        mensaje,address = self.socket.receive()
+        mensaje,address = self.socket.recieve()
         log(f'Recibimos: {mensaje.decode()}')
 
         log('Fin server')
