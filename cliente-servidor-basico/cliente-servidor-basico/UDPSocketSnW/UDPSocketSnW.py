@@ -5,7 +5,7 @@ from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from random import random
 
-PACKET_LOSS = 0.95
+PACKET_LOSS = 0
 
 def log(msg):
     db(f'[UdpSkt] {msg}')

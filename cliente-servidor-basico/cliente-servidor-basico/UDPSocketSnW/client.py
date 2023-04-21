@@ -16,11 +16,32 @@ class Client:
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
         self.filename = 'test.txt'
-        self.run()
+        self.download()
 
     def download(self):
         log('download')
-        pass
+
+        nombre_archivo = 'server_test.txt'
+        operacion = 'download'
+        mensaje = f'{operacion}|{nombre_archivo}'
+        log(f'>{mensaje}')
+        self.socket.send(mensaje.encode())
+
+        mensaje, address = self.socket.recieve()
+        [status,filename,filesize] = mensaje.decode().split('|')
+
+        log(f'status: {status}')
+
+        assert status == 'CONECTADO'
+        assert filename == nombre_archivo
+
+        with open(f'client_{filename}', 'wb') as archivo:
+            iters = ceil(int(filesize) / (self.socket.buffer_size - self.socket.header_size))
+            for i in range(iters):
+                bytes, address = self.socket.recieve()
+                archivo.write(bytes)
+        
+        self.cerrar()
 
     def cerrar(self):
         log('cerrar')
@@ -40,8 +61,7 @@ class Client:
         self.socket.send(mensaje.encode())
 
         mensaje, address = self.socket.recieve()
-        if mensaje.decode() != 'CONECTADO':
-            exit()
+        assert mensaje.decode() != 'CONECTADO'
 
         with open(nombre_archivo, 'rb') as archivo:
             header_size = 8
