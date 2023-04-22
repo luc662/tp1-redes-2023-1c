@@ -8,6 +8,7 @@ from random import random
 PACKET_LOSS = 0
 
 def log(msg):
+    return
     db(f'[UdpSkt] {msg}')
 
 class UDPSocketSnW:
@@ -19,7 +20,7 @@ class UDPSocketSnW:
         self.expected_sequence_num = 0
         self.buffer_size = 1024
         self.header_size = 8
-        self.send_retries = 500
+        self.send_retries = 100
         self.packet_loss_counter = 0
         self.packet_loss_activated = True
 
@@ -27,6 +28,7 @@ class UDPSocketSnW:
         log('send')
         packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + data
         self.socket.sendto(packet, self.address)
+
         log('(send) Esperando ACK (bucle)')
         for i in range(self.send_retries):
             log(f'(send-ack-loop) Intento: {i + 1}/{self.send_retries}')
@@ -57,12 +59,12 @@ class UDPSocketSnW:
         log('(send) fin send')
 
     def recieve(self):
+        self.socket.settimeout(None)
         log('recieve')
         data, address = self.socket.recvfrom(self.buffer_size)
         sequence_number, expected_seq_number = struct.unpack('II', data[:8])
 
         log(f'(recv) {sequence_number}:{expected_seq_number}')
-        log(f'{data}')
 
         ack_packet = struct.pack('II', sequence_number, self.expected_sequence_num)
         self.socket.sendto(ack_packet, address)
@@ -70,6 +72,7 @@ class UDPSocketSnW:
             self.expected_sequence_num += 1
             self.sequence_number += 1
             return data[8:], address
+        
         return None, address
 
     def bind(self, address):

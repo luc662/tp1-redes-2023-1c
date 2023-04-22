@@ -13,7 +13,7 @@ class Server:
 
     def __init__(self):
         log('start')
-        UDP_IP = '127.0.0.1'
+        UDP_IP = '10.0.0.1'
         UDP_PORT = 2001
 
         self.socket = UDPSocket(None)
@@ -26,6 +26,7 @@ class Server:
         log('download')
         [nombre_archivo] = parametros
         tamanio_archivo = os.stat(nombre_archivo).st_size
+        log(f'{nombre_archivo}: {tamanio_archivo}')
         self.socket.send(f'CONECTADO|{nombre_archivo}|{str(tamanio_archivo)}'.encode())
 
         with open(f'{nombre_archivo}','rb') as archivo:
@@ -36,10 +37,10 @@ class Server:
 
     def cerrar(self):
         log('cerrar')
-        mensaje,address = self.socket.recieve()
-        if f'{mensaje.decode()}' == 'FIN':
-            self.socket.send('FINACK'.encode())
-        mensaje, address = self.socket.recieve()
+        #mensaje,address = self.socket.recieve()
+        #if f'{mensaje.decode()}' == 'FIN':
+        #    self.socket.send('FINACK'.encode())
+        #mensaje, address = self.socket.recieve()
 
     def listen(self):
         log('listen')
@@ -47,12 +48,14 @@ class Server:
         if not mensaje:
             return 'retry',[]
 
+        log(f'Conexion iniciada por Cliente: {address}')
         log(f'>{mensaje}')
         self.socket.address = address
         payload = mensaje.decode()
         l = payload.split('|')
         tipo_operacion = l[0]
 
+        log(f'Operacion: {tipo_operacion}')
         if tipo_operacion == 'upload':
             nombre_archivo = l[1]
             tamanio_archivo = l[2]
@@ -75,11 +78,20 @@ class Server:
     def upload(self,parametros):
         log('upload')
         [nombre_archivo,tamanio_archivo] = parametros
+        log('Aceptando conexion del Cliente')
         self.socket.send('CONECTADO'.encode())
+
+        log('Abro archivo para empezar a escribir')
         with open(f'server_{nombre_archivo}','wb') as archivo:
-            iters = ceil(int(tamanio_archivo)/(self.socket.buffer_size-8))
-            for i in range(iters):
+            iters = ceil(int(tamanio_archivo)/(self.socket.buffer_size-self.socket.header_size))
+            log(f'Cantidad de paquetes a recibir: {iters}')
+            i = 0
+            while i < iters:
+                log(f'Recibiendo paquete {i}/{iters}')
                 mensaje, address = self.socket.recieve()
-                archivo.write(mensaje)
+                if mensaje:
+                    i += 1
+                    log(f'Recibiendo: {mensaje}')
+                    archivo.write(mensaje)
 
 Server()
