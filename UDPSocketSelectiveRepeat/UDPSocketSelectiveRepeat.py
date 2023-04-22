@@ -42,13 +42,13 @@ class UDPSocketGBN:
         threads = []
         # crear el thread que se queda escuchando los acks
         thread_respuestas = threading.Thread(target=self.escuchar_acks, args=(my_manejador_de_ventanas,))
-        thread_respuestas.append(thread)
+        threads.append(thread_respuestas)
         thread_respuestas.start()
         # primera parte del envio, abro un thread por cada iter inicial
-        for i in range(iters_inicial):
+        for i in range(iters_inicial, cantidad_paquetes):
             queue_de_bloque = queue.Queue()
-            log(f'Leer {self.buffer_size - header_size}B {i}/{cantidad_paquetes}')
-            bytes = archivo.read(self.socket.buffer_size - header_size)
+            log(f'Leer {self.buffer_size - header_size}B {}/{cantidad_paquetes}')
+            bytes = archivo.read(self.buffer_size - header_size)
             my_manejador_de_ventanas.agregar_ventana(i, queue_de_bloque)
             log('Enviando')
 
@@ -58,19 +58,21 @@ class UDPSocketGBN:
             log('Enviado!')
 
         # mando el resto de los paquetes cuando se libere un thread
-        while True:
-            if my_manejador_de_ventanas.respuestas_escuchadas == cantidad_paquetes:  # si, me llega el ultimo mensaje por queue_respuestas
+        for i in range(iters_inicial):
+            # si, me llega el ultimo mensaje por queue_respuestas
+            if my_manejador_de_ventanas.respuestas_escuchadas == cantidad_paquetes:
+
                 break
             else:
                 respuesta = queue_respuestas.get(block=True)
                 log(f'se cerro el thread que enviaba el bloque {respuesta}/{cantidad_paquetes}')
                 queue_de_bloque = queue.Queue()
                 log(f'Leer {self.buffer_size - header_size}B {i}/{cantidad_paquetes}')
-                bytes = archivo.read(self.socket.buffer_size - header_size)
+                bytes = archivo.read(self.buffer_size - header_size)
                 my_manejador_de_ventanas.agregar_ventana(i, queue_de_bloque)
                 log('Enviando')
 
-                thread = threading.Thread(target=enviar_bloque, args=(bytes, queue_de_bloque))
+                thread = threading.Thread(target=self.enviar_bloque, args=(bytes, queue_de_bloque))
                 threads.append(thread)
                 thread.start()
                 # abro otro paquete y lo agrego a la pila.
