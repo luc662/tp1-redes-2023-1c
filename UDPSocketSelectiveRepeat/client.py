@@ -33,12 +33,13 @@ class Client:
         mensaje += f'|{str(len(mensaje))}'
         log(f'Mensaje: {mensaje}')
         log('Enviando')
-        self.socket.send(mensaje.encode())
+        self.socket.send_and_wait_for_ack(mensaje.encode())
         log('Enviado!')
 
         log('Esperando respuesta del Servidor')
         log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
-        mensaje, address = self.socket.receive()
+        mensaje, address, seq_number = self.socket.receive()
+        log(f'Respuesta del servidor: {mensaje.decode()}')
         log(f'Respuesta del servidor: {mensaje.decode()}')
 
         if mensaje.decode() != 'CONECTADO':
@@ -52,14 +53,7 @@ class Client:
             # esto lo movemos un paso mas adentro al socket
             header_size = 8
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
-
-            for i in range(iters):
-                log(f'Leer {self.socket.buffer_size - header_size}B {i}/{iters}')
-                bytes = archivo.read(self.socket.buffer_size - header_size)
-                #payload = f'{bytes.decode()}|{str(len(bytes))}'
-                log('Enviando')
-                self.socket.send(bytes)
-                log('Enviado!')
+            self.socket.enviar_archivo(tamanio_archivo, archivo)
 
             log('Cerrar archivo')
 
@@ -69,7 +63,7 @@ class Client:
         # enviamos FIN
         log('Enviamos FIN al servidor')
         # socket.close()
-
+        '''
         payload = 'FIN'
         self.socket.send(payload.encode())
 
@@ -78,8 +72,8 @@ class Client:
         print(f'Recibimos: {mensaje.decode()}')
 
         print('Enviamos ACK')
-        self.socket.send('ACK'.encode())
-
+        #self.socket.send_and_wait_for_ack('ACK'.encode())
+        '''
         print('Fin del cliente')
 
 Client()

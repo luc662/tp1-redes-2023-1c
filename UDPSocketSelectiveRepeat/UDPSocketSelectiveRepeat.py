@@ -5,12 +5,12 @@ import threading
 import queue
 from math import ceil
 from logging import debug as db
-from manejador_de_ventanas import manejador_de_ventanas
+from ManejadorDeVentanas import ManejadorDeVentanas
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from random import random
 
-PACKET_LOSS = 0.3
+PACKET_LOSS = 0
 
 
 def log(msg):
@@ -26,54 +26,66 @@ class UDPSocketGBN:
         self.sequence_number = 0
         self.expected_sequence_num = 0
         self.buffer_size = 1024
-        self.send_retries = 10
+        self.header_size = 8
+        self.send_retries = 1
         self.packet_loss_counter = 0
+        self.packet_loss_activated = True
 
+    # LAS PILAS NO SE PUEDEN USAR EN EL MANEJADOR DE VENTANAS, PERO ACA SI
     def enviar_archivo(self, tamanio_archivo, archivo):
         header_size = 8
         cantidad_paquetes = ceil(tamanio_archivo / (self.buffer_size - header_size))
-        #
-        iters_inicial = min(cantidad_paquetes, 10)
+
+        iters_inicial = min(cantidad_paquetes, 2)
         log(f'Iters Inicial, Cantidad de paquetes  {iters_inicial, cantidad_paquetes}')
         # queue que este thread se queda escuchando
         queue_respuestas = queue.Queue()
-        my_manejador_de_ventanas = manejador_de_ventanas(cantidad_paquetes, queue_respuestas)
+        log(f'EL ULTIMO SEQ NUMBER FUE:  {self.sequence_number}')
+
+        my_manejador_de_ventanas = ManejadorDeVentanas(cantidad_paquetes, queue_respuestas)
         bloques_restantes = cantidad_paquetes - iters_inicial
 
         threads = []
         # crear el thread que se queda escuchando los acks
-        thread_respuestas = threading.Thread(target=self.escuchar_acks, args=(my_manejador_de_ventanas,))
+        thread_respuestas = threading.Thread(target=self.escuchar_acks,
+                                             args=(my_manejador_de_ventanas, queue_respuestas))
         threads.append(thread_respuestas)
         thread_respuestas.start()
         # primera parte del envio, abro un thread por cada iter inicial
-        for i in range(iters_inicial, cantidad_paquetes):
+        for i in range(iters_inicial):
+            log(f'Iters Inicial, Cantidad de paquetes  {i + 1, cantidad_paquetes}')
             queue_de_bloque = queue.Queue()
-            log(f'Leer {self.buffer_size - header_size}B {i}/{cantidad_paquetes}')
+            log(f'Leer {self.buffer_size - header_size}B {i + 1}/{cantidad_paquetes}')
             bytes = archivo.read(self.buffer_size - header_size)
-            my_manejador_de_ventanas.agregar_ventana(i, queue_de_bloque)
+            my_manejador_de_ventanas.agregar_ventana(self.sequence_number + i, queue_de_bloque)
             log('Enviando')
+            packet = struct.pack('II', self.sequence_number + i, self.expected_sequence_num) + bytes
 
-            thread = threading.Thread(target=self.enviar_bloque, args=(bytes, queue_de_bloque))
+            thread = threading.Thread(target=self.enviar_bloque, args=(packet, queue_de_bloque, queue_respuestas))
             threads.append(thread)
             thread.start()
             log('Enviado!')
-
+        log(f'_________________________A PUNTO DE ENTRAR EN LA FASE 2__________________________________')
         # mando el resto de los paquetes cuando se libere un thread
-        for i in range(iters_inicial):
+        for i in range(iters_inicial, cantidad_paquetes):
             # si, me llega el ultimo mensaje por queue_respuestas
             if my_manejador_de_ventanas.respuestas_escuchadas == cantidad_paquetes:
-
+                log(f'_________________________FIN DE ARCHIVO__________________________________')
                 break
             else:
+                log(f'_________________________ESPERANDO MENSAJE DE LIBERACION__________________________________')
                 respuesta = queue_respuestas.get(block=True)
+                log(f'_________________________LIBERO THREAD PRINCIPAL__________________________________')
+
                 log(f'se cerro el thread que enviaba el bloque {respuesta}/{cantidad_paquetes}')
                 queue_de_bloque = queue.Queue()
-                log(f'Leer {self.buffer_size - header_size}B {i}/{cantidad_paquetes}')
+                log(f'Leer {self.buffer_size - header_size}B {i + 1}/{cantidad_paquetes}')
                 bytes = archivo.read(self.buffer_size - header_size)
-                my_manejador_de_ventanas.agregar_ventana(i, queue_de_bloque)
+                packet = struct.pack('II', self.sequence_number + i, self.expected_sequence_num) + bytes
+                my_manejador_de_ventanas.agregar_ventana(self.sequence_number + i, queue_de_bloque)
                 log('Enviando')
 
-                thread = threading.Thread(target=self.enviar_bloque, args=(bytes, queue_de_bloque))
+                thread = threading.Thread(target=self.enviar_bloque, args=(packet, queue_de_bloque, queue_respuestas))
                 threads.append(thread)
                 thread.start()
                 # abro otro paquete y lo agrego a la pila.
@@ -95,8 +107,40 @@ class UDPSocketGBN:
 
         log('(send) fin send')
 
+    def send_and_wait_for_ack(self, data):
+        log('send')
+        packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + data
+        self.socket.sendto(packet, self.address)
+
+        log('(send) Esperando ACK (bucle)')
+        for i in range(self.send_retries):
+            log(f'(send-ack-loop) Intento: {i + 1}/{self.send_retries}')
+            log('(send-ack-loop) Iniciar timer (1s)')
+            self.socket.settimeout(1.0)
+            log('(send-ack-loop) Recibir respuesta (ACK)')
+            try:
+                if self.packet_loss_activated:
+                    r = random()
+                    if r > PACKET_LOSS:
+                        data, address = self.socket.recvfrom(self.buffer_size)
+                        ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
+                        if ack_sequence_number == self.expected_sequence_num:
+                            self.expected_sequence_num += 1
+                            self.sequence_number += 1
+                            break
+                    else:
+                        log(f'(send) PACKET_LOSS con prob: {r}')
+                        self.packet_loss_counter += 1
+                        log(f'(send) PAQUETES PERDIDOS: {self.packet_loss_counter}')
+            except socket.timeout:
+                log('(send-ack-loop) Timeout!')
+                self.socket.sendto(packet, self.address)
+        else:
+            log('IMPLEMENTAR EXCEPTION')
+        log('(send) fin send')
+
     # esta parte va a
-    def enviar_bloque(self, packet, queue_ventana):
+    def enviar_bloque(self, packet, queue_ventana, queue_respuestas):
         self.socket.sendto(packet, self.address)
         for i in range(self.send_retries):
             log(f'(send-ack-loop) Intento: {i + 1}/{self.send_retries}')
@@ -105,38 +149,40 @@ class UDPSocketGBN:
             log('(send-ack-loop) Recibir respuesta (ACK Hopefully)')
 
             try:
-                #me quedo escuchando a la queue
-                data = queue_ventana.get(block=True, timeout=0.1)
+                # me quedo escuchando a la queue
+                data = queue_ventana.get(block=True, timeout=0.5)
                 ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
                 log(f'(send-ack-loop) ack_seq_num: {ack_sequence_number}, ack_expected_seq_num: {ack_expected_seq_number}')
                 log('(send-ack-loop) Desempaquetar')
                 break
             except queue.Empty:
-                #no se escucho a la queue y lanzo un timeout
+                # no se escucho a la queue y lanzo un timeout
                 log('(send-ack-loop) Timeout!')
-                log(f'(send-ack-loop) Reenviando: {packet}')
-                log(f'(send-ack-loop) A: {self.address}')
                 self.socket.sendto(packet, self.address)
         else:
-            print('IMPLEMENTAR EXCEPTION')
+            print('IMPLEMENTAR EXCEPTION SELECTIVE REPEAT')
 
     # esta parte escucha la llegada de acks a la estructura
-    def escuchar_acks(self, my_manejador_de_ventanas):
+    def escuchar_acks(self, my_manejador_de_ventanas, queue_respuestas):
         logging.debug('(get-ack-loop) thread que escucha respuestas (ACK)')
         # Tiemout alto, por si se cae la conexion
         self.socket.settimeout(15.0)
         try:
+            log(f'_________________________EMPIEZO A ESCUCHAR AKS__________________________________')
             while not my_manejador_de_ventanas.finalizo():
-
                 data, address = self.socket.recvfrom(self.buffer_size)
+                log(f'_________________________ESCUCHE UN ACK____finalizo? {my_manejador_de_ventanas.finalizo()}')
+
                 logging.debug('(send-ack-loop) Desempaquetar')
                 ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
+                queue_respuestas.put("agrego un valor a la pila" + str(ack_sequence_number))
+                logging.debug(
+                    f'(send-ack-loop) ack_seq_num: {ack_sequence_number}, ack_expected_seq_num: {ack_expected_seq_number}')
                 my_manejador_de_ventanas.pushear_a_ventana(ack_sequence_number, data)
                 logging.debug(
                     f'(send-ack-loop) ack_seq_num: {ack_sequence_number}, ack_expected_seq_num: {ack_expected_seq_number}')
         except socket.timeout:
             logging.debug('(get-ack-loop) no llego ningun ACK en mucho tiempo, cierro todo')
-
 
     def receive(self):
         self.socket.settimeout(None)
@@ -146,18 +192,12 @@ class UDPSocketGBN:
         sequence_number, expected_seq_number = struct.unpack('II', data[:8])
         log(f'(recv) seq_num: {sequence_number}')
         log(f'(recv) expected_seq_num: {expected_seq_number}')
-        log(f'(recv) payload: {data[8:]}')
-        ## SIMULACION DE PERDIDA DE PAQUETES ack
-        # p = random()
-        # if p < PACKET_LOSS:
-        #    log(f'(RECV) PACKET_LOSS con prob: {p}')
-        #    self.packet_loss_counter += 1
-        #    log(f'PAQUETES PERDIDOS: {self.packet_loss_counter}')
-        #    return None, address
-        ## SIMULACION DE PERDIDA DE PAQUETES
-
+        log(f'(recv) payload: {data}')
         log(f'(recv) Enviar ACK')
+
         ack_packet = struct.pack('II', sequence_number, self.expected_sequence_num)
+        log(f'(recv) Enviar ACK: {ack_packet}')
+
         self.socket.sendto(ack_packet, address)
         log(f'(recv) Enviado')
         '''
@@ -170,7 +210,7 @@ class UDPSocketGBN:
         '''
         log('(recv) fin recv')
         # tenemos que mandar tambien el seq number para que se ordene despues
-        return data[8:], address
+        return data[8:], address, sequence_number
 
     def bind(self, address):
         log(f'(bind): {address} (deberia ser solo en el servidor, pero no nos metamos en capa de app)')

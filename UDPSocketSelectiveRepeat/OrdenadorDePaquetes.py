@@ -35,7 +35,7 @@ class OrdenadorDePaquetes():
         # acquire the lock
         with self._lock:
             # pop a value from the list
-            # self.blocks_occupied -= 1
+            self.blocks_occupied -= 1
             return self._list.pop()
 
     # read a value from the list at an index
