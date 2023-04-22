@@ -4,6 +4,8 @@ from math import ceil
 from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from UDPSocketSelectiveRepeat import UDPSocketGBN as UDPSocket
+from OrdenadorDePaquetes import OrdenadorDePaquetes
+
 def log(msg):
     db(f'[Server] {msg}')
 
@@ -44,19 +46,28 @@ class Server:
         log('Esperamos recibir mas datos:')
         with open(f'server_{nombre_archivo}','wb') as archivo:
             iters = ceil(int(tamanio_archivo)/(self.socket.buffer_size-8))
-            for i in range(iters):
-                log(f'Recibiendo... {i+1}/{iters}')
-                while True:
-                    mensaje, address = self.socket.receive()
-                    # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
-                    if mensaje:
-                        log(f'Recibimos: {mensaje}')
-                        log(f'De: {address}')
-                        log(f'Tamanio: {len(mensaje)}')
-                        archivo.write(mensaje)
-                        break
+
+            ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(tamanio_archivo)/(self.socket.buffer_size-8)))
+
+            while not ordenadorDePaquetes.is_full():
+                log(f'Recibiendo... /{iters}')
+                mensaje, address = self.socket.receive()
+                # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
+                log(f'Mensaje: {mensaje}')
+                if mensaje:
+                    log(f'Recibimos: {mensaje}')
+                    log(f'De: {address}')
+                    log(f'Tamanio: {len(mensaje)}')
+                    ordenadorDePaquetes.add(self.socket.sequence_number, mensaje)
+                    break
                     # sino pregunto por el mismo archivo
-            
+                else:
+                    log(f'No Hubo Mensaje: {mensaje}')
+
+            # escribo el archivo
+            while not ordenadorDePaquetes.is_empty():
+                archivo.write(ordenadorDePaquetes.pop())
+
         log('Fin del archivo')
 
         log('Esperamos FIN')

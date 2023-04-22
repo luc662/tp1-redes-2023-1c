@@ -34,9 +34,10 @@ class UDPSocketGBN:
         cantidad_paquetes = ceil(tamanio_archivo / (self.buffer_size - header_size))
         #
         iters_inicial = min(cantidad_paquetes, 10)
+        log(f'Iters Inicial, Cantidad de paquetes  {iters_inicial, cantidad_paquetes}')
         # queue que este thread se queda escuchando
         queue_respuestas = queue.Queue()
-        my_manejador_de_ventanas = manejador_de_ventanas.manejador_de_ventanas(cantidad_paquetes, queue_respuestas)
+        my_manejador_de_ventanas = manejador_de_ventanas(cantidad_paquetes, queue_respuestas)
         bloques_restantes = cantidad_paquetes - iters_inicial
 
         threads = []
@@ -47,7 +48,7 @@ class UDPSocketGBN:
         # primera parte del envio, abro un thread por cada iter inicial
         for i in range(iters_inicial, cantidad_paquetes):
             queue_de_bloque = queue.Queue()
-            log(f'Leer {self.buffer_size - header_size}B {}/{cantidad_paquetes}')
+            log(f'Leer {self.buffer_size - header_size}B {i}/{cantidad_paquetes}')
             bytes = archivo.read(self.buffer_size - header_size)
             my_manejador_de_ventanas.agregar_ventana(i, queue_de_bloque)
             log('Enviando')
