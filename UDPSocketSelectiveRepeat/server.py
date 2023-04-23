@@ -41,7 +41,7 @@ class Server:
         log(f'Tamanio de paquete: {tamanio_paquete}')
 
         log('Aceptamos peticion. Enviamos CONECTADO')
-        self.socket.send_and_wait_for_ack('CONECTADO'.encode())
+        data = self.socket.send_and_wait_for_ack('CONECTADO'.encode())
         
         log('Esperamos recibir mas datos:')
         with open(f'server_{nombre_archivo}','wb') as archivo:
@@ -53,39 +53,22 @@ class Server:
                 log(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
                 mensaje, address, seq_number = self.socket.receive()
                 # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
-                if mensaje:
+                if mensaje is not None and seq_number is not None:
                     log(f'De: {address}')
                     log(f'Tamanio: {len(mensaje)}')
                     log(f'seq_number: {seq_number}')
                     ordenadorDePaquetes.add(seq_number - 1, mensaje)
-                    # sino pregunto por el mismo archivo
-
-                else:
-                    log(f'No Hubo Mensaje: {mensaje}')
 
             # escribo el archivo
             for i in range(iters):
                 valor = ordenadorDePaquetes.get(i)
                 if not valor:
                     log(f'No Hubo Mensaje: {i}')
-                    #raise Exception
+
                 else:
                     archivo.write(ordenadorDePaquetes.get(i))
 
         log('Fin del archivo')
-        '''
-         log('Esperamos FIN')
-            mensaje,address = self.socket.receive()
-             recibir mensajes hasta que llegue FIN
-            if f'{mensaje.decode()}' == 'FIN':
-                log('Enviavos FINACK')
-                self.socket.send('FINACK'.encode())
-    
-            #log('Esperamos ACK')
-            # esperamos ACK final del cliente
-            #mensaje,address = self.socket.receive()
-            #log(f'Recibimos: {mensaje.decode()}')
-        '''
         log('Fin server')
     
 Server()

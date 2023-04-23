@@ -27,7 +27,7 @@ class UDPSocketGBN:
         self.expected_sequence_num = 0
         self.buffer_size = 1024
         self.header_size = 8
-        self.send_retries = 1
+        self.send_retries = 10
         self.packet_loss_counter = 0
         self.packet_loss_activated = True
 
@@ -35,7 +35,7 @@ class UDPSocketGBN:
     def enviar_archivo(self, tamanio_archivo, archivo):
         header_size = 8
         cantidad_paquetes = ceil(tamanio_archivo / (self.buffer_size - header_size))
-        #creo todas las pilas que escuchan los threads
+        # creo todas las pilas que escuchan los threads
         ventanas = {}
         for i in range(cantidad_paquetes):
             ventanas[i + self.sequence_number] = queue.Queue()
@@ -44,7 +44,6 @@ class UDPSocketGBN:
         log(f'Iters Inicial, Cantidad de paquetes  {iters_inicial, cantidad_paquetes}')
         # queue que este thread se queda escuchando
         queue_respuestas = queue.Queue()
-        log(f'EL ULTIMO SEQ NUMBER FUE:  {self.sequence_number}')
 
         my_manejador_de_ventanas = ManejadorDeVentanas(cantidad_paquetes, queue_respuestas)
         bloques_restantes = cantidad_paquetes - iters_inicial
@@ -67,19 +66,18 @@ class UDPSocketGBN:
             thread.start()
             self.sequence_number += 1
             log('Enviado!')
-        log(f'_________________________A PUNTO DE ENTRAR EN LA FASE 2__________________________________')
         # mando el resto de los paquetes cuando se libere un thread
         for i in range(iters_inicial, cantidad_paquetes):
             # si, me llega el ultimo mensaje por queue_respuestas
             if my_manejador_de_ventanas.respuestas_escuchadas == cantidad_paquetes:
-                log(f'_________________________FIN DE ARCHIVO__________________________________')
                 break
             else:
-                log(f'_________________________ESPERANDO MENSAJE DE LIBERACION__________________________________')
                 respuesta = queue_respuestas.get(block=True)
-                log(f'_________________________LIBERO THREAD PRINCIPAL__________________________________')
+                # si me llego un timeout, deberia cortar todas las iteraciones
+                if "TIMEOUT" in respuesta:
+                    break
 
-                log(f'se cerro el thread que enviaba el bloque {respuesta}/{cantidad_paquetes}')
+                log(f'(send) {respuesta}')
                 log(f'Leer {self.buffer_size - header_size}B {i + 1}/{cantidad_paquetes}')
                 bytes = archivo.read(self.buffer_size - header_size)
                 packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + bytes
@@ -90,6 +88,9 @@ class UDPSocketGBN:
                 thread.start()
                 self.sequence_number += 1
                 # abro otro paquete y lo agrego a la pila.
+
+        for t in threads:
+            t.join()
 
         log('Cerrar archivo')
 
@@ -140,19 +141,17 @@ class UDPSocketGBN:
             log('IMPLEMENTAR EXCEPTION')
         log('(send) fin send')
 
-    # esta parte va a
+    # esta parte va a tratar de enviar un bloque de datos y se queda escuchando a su queue por respuestas de acks
     def enviar_bloque(self, packet, queue_ventana):
         self.socket.sendto(packet, self.address)
         for i in range(self.send_retries):
             log(f'(send-ack-loop) Intento: {i + 1}/{self.send_retries}')
-
-            log('(send-ack-loop) Iniciar timer (1s)')
             log('(send-ack-loop) Recibir respuesta (ACK Hopefully)')
 
             try:
                 # me quedo escuchando a la queue
-                data = queue_ventana.get(block=True, timeout=0.5)
-                log(f'(send-ack-loop) --------------llego un ACK al thread que envia---------------------')
+                log('(send-ack-loop) Recibir respuesta de pila')
+                data = queue_ventana.get(block=True, timeout=1)
                 ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
                 log(f'(send-ack-loop) ack_seq_num: {ack_sequence_number}, ack_expected_seq_num: {ack_expected_seq_number}')
                 log('(send-ack-loop) Desempaquetar')
@@ -165,32 +164,31 @@ class UDPSocketGBN:
             print('IMPLEMENTAR EXCEPTION SELECTIVE REPEAT')
 
     # esta parte escucha la llegada de acks a la estructura
-    def escuchar_acks(self, canales_ventanas, queue_respuestas):
+    # funciona como un cartero, recibe las cartas y las envia a quien corresponda
+    def escuchar_acks(self, canales_ventanas, canal_respuestas):
         logging.debug('(get-ack-loop) thread que escucha respuestas (ACK)')
         # Tiemout alto, por si se cae la conexion
         self.socket.settimeout(15.0)
         ventanas_escuchadas = {}
         try:
-            log(f'_________________________EMPIEZO A ESCUCHAR AKS__________________________________')
+            log(f'(ACKs listener) Empiezo a escuchar ACKs')
+            # usamos un dic para contar asi validamos que se sume solo si el valor es nuevo
             while len(ventanas_escuchadas) < len(canales_ventanas):
                 data, address = self.socket.recvfrom(self.buffer_size)
-                log(f'_____ESCUCHE UN ACK____finalizo? {len(ventanas_escuchadas)} / {len(canales_ventanas)}')
-
                 logging.debug('(send-ack-loop) Desempaquetar')
                 ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
-
-                queue_respuestas.put("agrego un valor a la pila" + str(ack_sequence_number))
-                logging.debug(
-                    f'(send-ack-loop) ack_seq_num: {ack_sequence_number}, ack_expected_seq_num: {ack_expected_seq_number}'
-                )
-                my_queue = canales_ventanas[ack_sequence_number]
-                my_queue.put(data)
+                canal_respuestas.put("me llego el ACK de : " + str(ack_sequence_number))
+                canal = canales_ventanas[ack_sequence_number]
+                canal.put(data)
+                # quizas hay una mejor forma de contar cuantos mensajes hay
+                #  pero asi nos aseguramos  que sume sii es un nuevo mensaje
                 ventanas_escuchadas[ack_sequence_number] = True
-                #my_manejador_de_ventanas.pushear_a_ventana(ack_sequence_number, data)
-                logging.debug(
-                    f'(send-ack-loop) ack_seq_num: {ack_sequence_number}, ack_expected_seq_num: {ack_expected_seq_number}')
+                log(
+                    f'(ACKs listener) escuche la siguiente cantidad de ACKs {len(ventanas_escuchadas)} / {len(canales_ventanas)}'
+                )
         except socket.timeout:
-            logging.debug('(get-ack-loop) no llego ningun ACK en mucho tiempo, cierro todo')
+            canal_respuestas.put("TIMEOUT" )
+            logging.debug('(ACKs listener) no llego ningun ACK en mucho tiempo, cierro todo')
 
     def receive(self):
         self.socket.settimeout(None)
@@ -200,22 +198,11 @@ class UDPSocketGBN:
         sequence_number, expected_seq_number = struct.unpack('II', data[:8])
         log(f'(recv) seq_num: {sequence_number}')
         log(f'(recv) expected_seq_num: {expected_seq_number}')
-        log(f'(recv) payload: {data}')
-        log(f'(recv) Enviar ACK')
-
         ack_packet = struct.pack('II', sequence_number, self.expected_sequence_num)
         log(f'(recv) Enviar ACK: {ack_packet}')
 
         self.socket.sendto(ack_packet, address)
         log(f'(recv) Enviado')
-        '''
-        if sequence_number == self.expected_sequence_num:
-            self.expected_sequence_num += 1
-            self.sequence_number += 1
-            log(f'(recv) OK. Incrementar secuencia')
-            # si nos llega la secuencia de datos deseada, devuelvo la data
-            
-        '''
         log('(recv) fin recv')
         # tenemos que mandar tambien el seq number para que se ordene despues
         return data[8:], address, sequence_number
