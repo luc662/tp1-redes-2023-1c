@@ -71,7 +71,10 @@ class Client:
         self.socket.expected_sequence_num = 0
         self.socket.sequence_number = 0
         log(f'Esperando respuesta del Servidor {self.socket.address}')
-        mensaje, address = self.socket.recieve()
+        while True:
+            mensaje, address = self.socket.recieve()
+            if mensaje:
+                break
         log(f'Recibimos respuesta de: {address}')
         self.socket.address = address
 
