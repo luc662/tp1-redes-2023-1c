@@ -15,61 +15,80 @@ class Client:
         self.server_address = "127.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
-        self.filename = 'test.txt'
-        self.download()
+        self.filename = 'bee.txt'
+        self.run()
 
     def download(self):
         log('download')
 
-        nombre_archivo = 'server_test.txt'
+        self.filename = 'server_test.txt'
         operacion = 'download'
-        mensaje = f'{operacion}|{nombre_archivo}'
+        mensaje = f'{operacion}|{self.filename}'
         log(f'>{mensaje}')
         self.socket.send(mensaje.encode())
 
+        self.socket.sequence_number = 0
+        self.socket.expected_sequence_num = 0
         mensaje, address = self.socket.recieve()
         [status,filename,filesize] = mensaje.decode().split('|')
 
         log(f'status: {status}')
 
         assert status == 'CONECTADO'
-        assert filename == nombre_archivo
+        assert filename == self.filename
 
         with open(f'client_{filename}', 'wb') as archivo:
             iters = ceil(int(filesize) / (self.socket.buffer_size - self.socket.header_size))
-            for i in range(iters):
+            i = 0
+            while i < iters:
+                log(f'Recibiendo paquete {i+1}/{iters}')
                 bytes, address = self.socket.recieve()
-                archivo.write(bytes)
+                if bytes:
+                    i+=1
+                    log(f'Recibiendo: {bytes}')
+                    archivo.write(bytes)
         
         self.cerrar()
 
     def cerrar(self):
         log('cerrar')
-        payload = 'FIN'
-        self.socket.send(payload.encode())
-        mensaje, address = self.socket.recieve()
-        log(f'(cerrar) recibimos: {mensaje}')
-        self.socket.send('ACK'.encode())
+        #payload = 'FIN'
+        #self.socket.send(payload.encode())
+        #mensaje, address = self.socket.recieve()
+        #log(f'(cerrar) recibimos: {mensaje}')
+        #self.socket.send('ACK'.encode())
 
     def run(self):
         log('upload')
-        nombre_archivo = 'test.txt'
         operacion = 'upload'
-        tamanio_archivo = os.stat(nombre_archivo).st_size
-        mensaje = f'{operacion}|{nombre_archivo}|{str(tamanio_archivo)}'
+        tamanio_archivo = os.stat(self.filename).st_size
+        mensaje = f'{operacion}|{self.filename}|{str(tamanio_archivo)}'
+        log('Armando Peticion al Servidor')
         log(f'>{mensaje}')
         self.socket.send(mensaje.encode())
+        log('Peticion enviada')
 
+        self.socket.expected_sequence_num = 0
+        self.socket.sequence_number = 0
+        log(f'Esperando respuesta del Servidor {self.socket.address}')
         mensaje, address = self.socket.recieve()
-        assert mensaje.decode() != 'CONECTADO'
+        log(f'Recibimos respuesta de: {address}')
+        self.socket.address = address
 
-        with open(nombre_archivo, 'rb') as archivo:
-            header_size = 8
-            iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
+        log(f'Recibimos: {mensaje}')
+        assert mensaje.decode() == 'CONECTADO'
+
+        log('Abriendo archivo para lectura')
+        with open(self.filename, 'rb') as archivo:
+            iters = ceil(tamanio_archivo / (self.socket.buffer_size - self.socket.header_size))
+            log(f'Cantidad de paquetes a enviar: {iters}')
             for i in range(iters):
-                bytes = archivo.read(self.socket.buffer_size - header_size)
+                log(f'Enviando paquete {i+1}/{iters}')
+                bytes = archivo.read(self.socket.buffer_size - self.socket.header_size)
+                log(f'Enviando: {bytes}')
                 self.socket.send(bytes)
 
+        log('Fin del archivo')
         self.cerrar()
 
 
