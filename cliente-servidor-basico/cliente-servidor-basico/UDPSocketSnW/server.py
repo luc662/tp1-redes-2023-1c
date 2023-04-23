@@ -31,7 +31,7 @@ class ClientThread:
         if operacion in self.operacion:
             self.operacion[operacion](params)
         else: 
-            raise Exception('ÑÑÑÑÑ')
+            raise Exception
     
     def download(self, parametros):
         logCT('download')
@@ -58,7 +58,7 @@ class ClientThread:
         self.socket.send('CONECTADO'.encode())
 
         logCT('Abro archivo para empezar a escribir')
-        with open(f'server_{nombre_archivo}','wb') as archivo:
+        with open(f'server_{self.socket.address[1]}_{nombre_archivo}','wb') as archivo:
             iters = ceil(tamanio_archivo/(self.socket.buffer_size - self.socket.header_size))
             logCT(f'Cantidad de paquetes a recibir: {iters}')
             i = 0
@@ -67,7 +67,6 @@ class ClientThread:
                 mensaje, address = self.socket.recieve()
                 if mensaje:
                     i += 1
-                    #logCT(f'Recibiendo: {mensaje}')
                     archivo.write(mensaje)
 
 class Server:
@@ -92,11 +91,14 @@ class Server:
 
     def listen(self):
         log('listen')
-        mensaje_invalido = True
-        while mensaje_invalido:
+        while True:
             mensaje, address = self.socket.recieve()
+            log(f'(listen) mensaje recibido {self.socket.address}')
             if mensaje:
-                mensaje_invalido = False
+                self.socket.expected_sequence_num = 0
+                self.socket.sequence_number = 0
+                break
+            log('Recibimos None como peticion. Repitiendo')
 
         log(f'Conexion iniciada por Cliente: {address}')
 
