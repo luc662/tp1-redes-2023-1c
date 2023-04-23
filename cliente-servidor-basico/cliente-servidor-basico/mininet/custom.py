@@ -1,7 +1,7 @@
 from mininet.topo import Topo
 from mininet.link import TCLink
 
-hosts_num = 40
+hosts_num = 2
 LOSS = 10
 
 class MyTopo(Topo):
