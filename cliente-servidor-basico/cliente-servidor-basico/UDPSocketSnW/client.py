@@ -12,11 +12,15 @@ def log(msg):
 class Client:
     def __init__(self):
         log('start')
-        self.server_address = "127.0.0.1"
+        self.server_address = "10.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
-        self.filename = 'bee.txt'
-        self.run()
+        self.filename = 'test.txt'
+        self.operaciones = {
+            'upload': self.upload,
+            'download': self.download
+        }
+        self.upload()
 
     def download(self):
         log('download')
@@ -58,7 +62,7 @@ class Client:
         #log(f'(cerrar) recibimos: {mensaje}')
         #self.socket.send('ACK'.encode())
 
-    def run(self):
+    def upload(self):
         log('upload')
         operacion = 'upload'
         tamanio_archivo = os.stat(self.filename).st_size
