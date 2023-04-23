@@ -50,7 +50,7 @@ class Server:
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(tamanio_archivo)/(self.socket.buffer_size-8)))
 
             while not ordenadorDePaquetes.is_full():
-                log(f'Recibiendo... /{iters}')
+                log(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
                 mensaje, address, seq_number = self.socket.receive()
                 # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
                 if mensaje:
@@ -58,7 +58,6 @@ class Server:
                     log(f'Tamanio: {len(mensaje)}')
                     log(f'seq_number: {seq_number}')
                     ordenadorDePaquetes.add(seq_number - 1, mensaje)
-                    break
                     # sino pregunto por el mismo archivo
 
                 else:
