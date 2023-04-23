@@ -73,12 +73,12 @@ class Server:
 
     def __init__(self):
         log('start')
-        UDP_IP = '127.0.0.1'
+        UDP_IP = '10.0.0.1'
         UDP_PORT = 2001
 
         self.socket = UDPSocket(None)
         self.socket.bind((UDP_IP, UDP_PORT))
-        self.threads = []
+        self.threads = {}
 
         self.run()
 
@@ -93,15 +93,14 @@ class Server:
         log('listen')
         while True:
             mensaje, address = self.socket.recieve()
-            log(f'(listen) mensaje recibido {self.socket.address}')
-            if mensaje:
+            log(f'(listen) mensaje recibido {address}')
+            if mensaje and address not in self.threads:
                 self.socket.expected_sequence_num = 0
                 self.socket.sequence_number = 0
                 break
             log('Recibimos None como peticion. Repitiendo')
 
         log(f'Conexion iniciada por Cliente: {address}')
-
         log('Creando socket')
         client_socket = UDPSocket(address)
         log('Socket creado')
@@ -123,7 +122,7 @@ class Server:
 
         log('Iniciando thread')
         client = ClientThread(client_socket, tipo_operacion, params)
-        self.threads.append(client)
+        self.threads[address] = client
         log('Iniciado')
 
     def run(self):
