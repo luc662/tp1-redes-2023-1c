@@ -13,7 +13,7 @@ def log(msg):
 class Client:
     def __init__(self):
         log('(start)')
-        self.server_address = "127.0.0.1"
+        self.server_address = "10.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
         log('Socket creado')
@@ -38,13 +38,13 @@ class Client:
 
         log('Esperando respuesta del Servidor')
         log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
-        mensaje, address, seq_number = self.socket.receive()
-        log(f'Respuesta del servidor: {mensaje.decode()}')
+        while True:
+            mensaje, address, seq_number = self.socket.receive()
+            if mensaje:
+                break
         log(f'Respuesta del servidor: {mensaje.decode()}')
 
-        if mensaje.decode() != 'CONECTADO':
-            log('No llego el CONECTADO del servidor')
-            exit()
+        assert mensaje.decode() == 'CONECTADO'
 
         log('Continuamos en el upload')
 
@@ -56,6 +56,8 @@ class Client:
             self.socket.enviar_archivo(tamanio_archivo, archivo)
 
             log('Cerrar archivo')
+
+        
 
         log('Fin de la transmision del archivo')
         log('Comenzamos cierre de conexion')

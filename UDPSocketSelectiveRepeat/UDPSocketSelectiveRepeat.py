@@ -89,8 +89,15 @@ class UDPSocketGBN:
                 self.sequence_number += 1
                 # abro otro paquete y lo agrego a la pila.
 
+        log('-__-------------------joining threads')
+
         for t in threads:
             t.join()
+
+        log('mandando FINALDEARCHIVO')
+
+        mensaje = 'FINALDEARCHIVO'
+        self.send_and_wait_for_ack(mensaje.encode())
 
         log('Cerrar archivo')
 
@@ -161,21 +168,24 @@ class UDPSocketGBN:
                 log('(send-ack-loop) Timeout!')
                 self.socket.sendto(packet, self.address)
         else:
-            print('IMPLEMENTAR EXCEPTION SELECTIVE REPEAT')
+            raise Exception('Unreacheable')
 
     # esta parte escucha la llegada de acks a la estructura
     # funciona como un cartero, recibe las cartas y las envia a quien corresponda
     def escuchar_acks(self, canales_ventanas, canal_respuestas):
-        logging.debug('(get-ack-loop) thread que escucha respuestas (ACK)')
+        log('(get-ack-loop) thread que escucha respuestas (ACK)')
         # Tiemout alto, por si se cae la conexion
         self.socket.settimeout(15.0)
         ventanas_escuchadas = {}
         try:
             log(f'(ACKs listener) Empiezo a escuchar ACKs')
             # usamos un dic para contar asi validamos que se sume solo si el valor es nuevo
-            while len(ventanas_escuchadas) < len(canales_ventanas):
+            #while len(ventanas_escuchadas) != len(canales_ventanas):
+            while ventanas_escuchadas.keys() != canales_ventanas.keys():
+                log(f'================  ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
+                log(f'{ventanas_escuchadas.keys()} ---- {canales_ventanas.keys()}')
                 data, address = self.socket.recvfrom(self.buffer_size)
-                logging.debug('(send-ack-loop) Desempaquetar')
+                log('(send-ack-loop) Desempaquetar')
                 ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
                 canal_respuestas.put("me llego el ACK de : " + str(ack_sequence_number))
                 canal = canales_ventanas[ack_sequence_number]
@@ -188,7 +198,9 @@ class UDPSocketGBN:
                 )
         except socket.timeout:
             canal_respuestas.put("TIMEOUT" )
-            logging.debug('(ACKs listener) no llego ningun ACK en mucho tiempo, cierro todo')
+            log('(ACKs listener) no llego ningun ACK en mucho tiempo, cierro todo')
+
+        log(f'=======ÑÑÑÑ=====  ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
 
     def receive(self):
         self.socket.settimeout(None)
@@ -202,12 +214,11 @@ class UDPSocketGBN:
         log(f'(recv) Enviar ACK: {ack_packet}')
 
         self.socket.sendto(ack_packet, address)
-        log(f'(recv) Enviado')
+        log('(recv) Enviado')
         log('(recv) fin recv')
         # tenemos que mandar tambien el seq number para que se ordene despues
         return data[8:], address, sequence_number
 
     def bind(self, address):
-        log(f'(bind): {address} (deberia ser solo en el servidor, pero no nos metamos en capa de app)')
+        log(f'(bind): {address}')
         self.socket.bind(address)
-        log('(bind) fin bind')

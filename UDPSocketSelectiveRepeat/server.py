@@ -13,7 +13,7 @@ class Server:
 
     def __init__(self):
         log('(start)')
-        UDP_IP = '127.0.0.1'
+        UDP_IP = '10.0.0.1'
         UDP_PORT = 2001
         self.socket = UDPSocket(None)
         self.socket.bind((UDP_IP, UDP_PORT))
@@ -23,7 +23,10 @@ class Server:
     def run(self):
         log('(run)')
         log('Escuchando')
-        mensaje, address, seq_number = self.socket.receive()
+        while True:
+            mensaje, address, seq_number = self.socket.receive()
+            if mensaje:
+                break
         self.socket.address = address
         payload = mensaje.decode()
         log(f'Recibimos peticion: {payload}')
@@ -49,7 +52,9 @@ class Server:
 
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(tamanio_archivo)/(self.socket.buffer_size-8)))
 
-            while not ordenadorDePaquetes.is_full():
+            es_final_de_archivo = False
+
+            while not ordenadorDePaquetes.is_full() and not es_final_de_archivo:
                 log(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
                 mensaje, address, seq_number = self.socket.receive()
                 # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
@@ -57,7 +62,10 @@ class Server:
                     log(f'De: {address}')
                     log(f'Tamanio: {len(mensaje)}')
                     log(f'seq_number: {seq_number}')
-                    ordenadorDePaquetes.add(seq_number - 1, mensaje)
+                    if mensaje.decode()=='FINALDEARCHIVO':
+                        es_final_de_archivo = True
+                    else:
+                        ordenadorDePaquetes.add(seq_number - 1, mensaje)
 
             # escribo el archivo
             for i in range(iters):
