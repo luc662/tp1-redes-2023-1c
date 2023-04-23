@@ -13,7 +13,7 @@ class Server:
 
     def __init__(self):
         log('(start)')
-        UDP_IP = '10.0.0.1'
+        UDP_IP = '127.0.0.1'
         UDP_PORT = 2001
         self.socket = UDPSocket(None)
         self.socket.bind((UDP_IP, UDP_PORT))
@@ -23,10 +23,7 @@ class Server:
     def run(self):
         log('(run)')
         log('Escuchando')
-        while True:
-            mensaje, address = self.socket.recieve_and_send_ack()
-            if mensaje:
-                break
+        mensaje, address, seq_number = self.socket.receive()
         self.socket.address = address
         payload = mensaje.decode()
         log(f'Recibimos peticion: {payload}')
@@ -46,8 +43,6 @@ class Server:
         log('Aceptamos peticion. Enviamos CONECTADO')
         data = self.socket.send_and_wait_for_ack('CONECTADO'.encode())
         
-        self.socket.sequence_number = 0
-        self.socket.expected_sequence_num = 0
         log('Esperamos recibir mas datos:')
         with open(f'server_{nombre_archivo}','wb') as archivo:
             iters = ceil(int(tamanio_archivo)/(self.socket.buffer_size-8))
@@ -62,7 +57,7 @@ class Server:
                     log(f'De: {address}')
                     log(f'Tamanio: {len(mensaje)}')
                     log(f'seq_number: {seq_number}')
-                    ordenadorDePaquetes.add(seq_number, mensaje)
+                    ordenadorDePaquetes.add(seq_number - 1, mensaje)
 
             # escribo el archivo
             for i in range(iters):
