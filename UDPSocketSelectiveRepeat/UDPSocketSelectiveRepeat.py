@@ -96,8 +96,10 @@ class UDPSocketGBN:
         for t in threads:
             t.join()
 
+        #esta parte es best effort, no importa tanto que nos llegue el ack
+        # sino que el receptor del archivo sepa que no trataremos de enviar mas
+        # bloques donde fallo los ACKs y seguimos intentando mandarlos
         log('mandando FINALDEARCHIVO')
-
         mensaje = 'FINALDEARCHIVO'
         self.send_and_wait_for_ack(mensaje.encode())
 
