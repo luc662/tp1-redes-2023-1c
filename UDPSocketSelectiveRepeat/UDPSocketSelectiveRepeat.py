@@ -5,7 +5,6 @@ import threading
 import queue
 from math import ceil
 from logging import debug as db
-from ManejadorDeVentanas import ManejadorDeVentanas
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from random import random
@@ -45,9 +44,6 @@ class UDPSocketGBN:
         # queue que este thread se queda escuchando
         queue_respuestas = queue.Queue()
 
-        my_manejador_de_ventanas = ManejadorDeVentanas(cantidad_paquetes, queue_respuestas)
-        bloques_restantes = cantidad_paquetes - iters_inicial
-
         threads = []
         # crear el thread que se queda escuchando los acks
         thread_respuestas = threading.Thread(target=self.escuchar_acks,
@@ -69,34 +65,30 @@ class UDPSocketGBN:
             log('Enviado!')
         # mando el resto de los paquetes cuando se libere un thread
         for i in range(iters_inicial, cantidad_paquetes):
-            # si, me llega el ultimo mensaje por queue_respuestas
-            if my_manejador_de_ventanas.respuestas_escuchadas == cantidad_paquetes:
+            respuesta = queue_respuestas.get(block=True)
+            # si me llego un timeout, no creo mas threads
+            if "TIMEOUT" in respuesta:
                 break
-            else:
-                respuesta = queue_respuestas.get(block=True)
-                # si me llego un timeout, deberia cortar todas las iteraciones
-                if "TIMEOUT" in respuesta:
-                    break
 
-                log(f'(send) {respuesta}')
-                log(f'Leer {self.buffer_size - header_size}B {i + 1}/{cantidad_paquetes}')
-                bytes = archivo.read(self.buffer_size - header_size)
-                packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + bytes
-                log('Enviando')
+            log(f'(send) {respuesta}')
+            log(f'Leer {self.buffer_size - header_size}B {i + 1}/{cantidad_paquetes}')
+            bytes = archivo.read(self.buffer_size - header_size)
+            packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + bytes
+            log('Enviando')
 
-                thread = threading.Thread(target=self.enviar_bloque, args=(packet, ventanas[self.sequence_number]))
-                threads.append(thread)
-                thread.start()
-                self.sequence_number += 1
-                self.expected_sequence_num += 1
-                # abro otro paquete y lo agrego a la pila.
+            thread = threading.Thread(target=self.enviar_bloque, args=(packet, ventanas[self.sequence_number]))
+            threads.append(thread)
+            thread.start()
+            self.sequence_number += 1
+            self.expected_sequence_num += 1
+            # abro otro paquete y lo agrego a la pila.
 
         log('-__-------------------joining threads')
 
         for t in threads:
             t.join()
 
-        #esta parte es best effort, no importa tanto que nos llegue el ack
+        # esta parte es best effort, no importa tanto que nos llegue el ack
         # sino que el receptor del archivo sepa que no trataremos de enviar mas
         # bloques donde fallo los ACKs y seguimos intentando mandarlos
         log('mandando FINALDEARCHIVO')
@@ -181,7 +173,7 @@ class UDPSocketGBN:
         try:
             log(f'(ACKs listener) Empiezo a escuchar ACKs')
             # usamos un dic para contar asi validamos que se sume solo si el valor es nuevo
-            #while len(ventanas_escuchadas) != len(canales_ventanas):
+            # while len(ventanas_escuchadas) != len(canales_ventanas):
             while ventanas_escuchadas.keys() != canales_ventanas.keys():
                 log(f'================  ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
                 log(f'{ventanas_escuchadas.keys()} ---- {canales_ventanas.keys()}')
@@ -198,7 +190,7 @@ class UDPSocketGBN:
                     f'(ACKs listener) escuche la siguiente cantidad de ACKs {len(ventanas_escuchadas)} / {len(canales_ventanas)}'
                 )
         except socket.timeout:
-            canal_respuestas.put("TIMEOUT" )
+            canal_respuestas.put("TIMEOUT")
             log('(ACKs listener) no llego ningun ACK en mucho tiempo, cierro todo')
 
         log(f'=======ÑÑÑÑ=====  ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
