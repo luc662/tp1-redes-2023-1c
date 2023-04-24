@@ -13,7 +13,7 @@ def log(msg):
 class Upload:
     def __init__(self):
         log('(start)')
-        self.server_address = "10.0.0.1"
+        self.server_address = "127.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
         log('Socket creado')

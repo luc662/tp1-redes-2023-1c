@@ -17,7 +17,7 @@ class Server:
 
     def __init__(self):
         log('(start)')
-        UDP_IP = '10.0.0.1'
+        UDP_IP = '127.0.0.1'
         UDP_PORT = 2001
         self.socket = UDPSocket(None)
         self.socket.bind((UDP_IP, UDP_PORT))
