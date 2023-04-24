@@ -23,14 +23,16 @@ class UDPSocketSnW:
         self.expected_sequence_num = 0
         self.buffer_size = 1024
         self.header_size = 8
-        self.send_retries = 100
+        self.send_retries = 15
         self.packet_loss_counter = 0
         self.packet_loss_activated = True
 
     def send(self, data):
         log('send')
         packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + data
+        log(f'(send) {self.sequence_number}, {self.expected_sequence_num}')
         self.socket.sendto(packet, self.address)
+        log('(send) Enviado')
 
         log('(send) Esperando ACK (bucle)')
         for i in range(self.send_retries):
@@ -41,12 +43,15 @@ class UDPSocketSnW:
                 if self.packet_loss_activated:
                     r = random()
                     if r > PACKET_LOSS:
+                        log('(send-ack-loop) esperando ack')
                         data, address = self.socket.recvfrom(self.buffer_size)
+                        log(f'(send-ack-loop) recibimos de: {address}, data:{data}')
                         ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
-                        if ack_sequence_number == self.expected_sequence_num:
-                            self.expected_sequence_num += 1
-                            self.sequence_number += 1
-                            break
+                        log(f'(send-ack-loop) recibimos seq_num: {ack_sequence_number}, expected: {ack_expected_seq_number}')
+                        #if ack_sequence_number == self.expected_sequence_num:
+                        self.expected_sequence_num += 1
+                        self.sequence_number += 1
+                        break
                     else:
                         log(f'(send) PACKET_LOSS con prob: {r}')
                         self.packet_loss_counter += 1
@@ -63,19 +68,18 @@ class UDPSocketSnW:
         data, address = self.socket.recvfrom(self.buffer_size)
         sequence_number, expected_seq_number = struct.unpack('II', data[:8])
         log('(recv) Paquete recibido')
-
         log(f'(recv) seq_num: {sequence_number}, expected_seq_num: {expected_seq_number}')
 
-        log('(recv) Enviando ACK')
+        log(f'(recv) Enviando ACK {sequence_number}, {self.expected_sequence_num}')
         ack_packet = struct.pack('II', sequence_number, self.expected_sequence_num)
         self.socket.sendto(ack_packet, address)
         log('(recv) ACK enviado')
-        if sequence_number == self.expected_sequence_num:
+        if sequence_number == self.sequence_number and expected_seq_number == self.expected_sequence_num:
             self.expected_sequence_num += 1
             self.sequence_number += 1
             return data[8:], address
         
-        log(f'(recv) Expected_seq_num: {self.expected_sequence_num}, recibimos seq_num: {sequence_number}')
+        log(f'(recv) self.expected_seq_num: {self.expected_sequence_num}, recibimos seq_num: {sequence_number}')
         return None, address
 
     def bind(self, address):

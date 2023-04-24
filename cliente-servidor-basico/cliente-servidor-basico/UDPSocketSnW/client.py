@@ -56,11 +56,18 @@ class Client:
 
     def cerrar(self):
         log('cerrar')
-        #payload = 'FIN'
-        #self.socket.send(payload.encode())
-        #mensaje, address = self.socket.recieve()
-        #log(f'(cerrar) recibimos: {mensaje}')
-        #self.socket.send('ACK'.encode())
+        payload = 'CERRAR'
+        self.socket.send(payload.encode())
+
+        while True:
+            mensaje, address = self.socket.recieve()
+            if mensaje:
+                break
+
+        assert mensaje.decode() == 'CERRAROK'
+        log(f'(cerrar) recibimos: {mensaje.decode()}')
+
+        self.socket.send('ACK'.encode())
 
     def upload(self):
         log('upload')

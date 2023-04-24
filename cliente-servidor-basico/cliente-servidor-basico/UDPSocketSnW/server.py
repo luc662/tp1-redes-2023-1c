@@ -51,6 +51,22 @@ class ClientThread:
                 self.socket.send(bytes)
                 logCT('Enviado')
 
+    def cerrar(self):
+        logCT('cerrar')
+        while True:
+            mensaje, address = self.socket.recieve()
+            if mensaje:
+                break
+        
+        assert mensaje.decode() == 'CERRAR'
+
+        self.socket.send('CERRAROK'.encode())
+
+        while True:
+            mensaje, address = self.socket.recieve()
+            if mensaje and mensaje.decode() != 'ACK':
+                break
+
     def upload(self, parametros):
         logCT('upload')
         [nombre_archivo, tamanio_archivo] = parametros
@@ -65,9 +81,13 @@ class ClientThread:
             while i < iters:
                 logCT(f'Recibiendo paquete {i+1}/{iters}')
                 mensaje, address = self.socket.recieve()
+                logCT(f'Recibimos {mensaje, address}')
                 if mensaje:
                     i += 1
                     archivo.write(mensaje)
+
+        logCT('fin upload')
+        self.cerrar()
 
 class Server:
 
