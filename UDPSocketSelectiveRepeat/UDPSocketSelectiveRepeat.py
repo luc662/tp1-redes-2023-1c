@@ -65,6 +65,7 @@ class UDPSocketGBN:
             threads.append(thread)
             thread.start()
             self.sequence_number += 1
+            self.expected_sequence_num += 1
             log('Enviado!')
         # mando el resto de los paquetes cuando se libere un thread
         for i in range(iters_inicial, cantidad_paquetes):
@@ -87,6 +88,7 @@ class UDPSocketGBN:
                 threads.append(thread)
                 thread.start()
                 self.sequence_number += 1
+                self.expected_sequence_num += 1
                 # abro otro paquete y lo agrego a la pila.
 
         log('-__-------------------joining threads')
@@ -102,7 +104,6 @@ class UDPSocketGBN:
         log('Cerrar archivo')
 
     def send(self, data):
-
         log(f'(send-estado) seq_num: {self.sequence_number}')
         log(f'(send-estado) expected_seq_num: {self.expected_sequence_num}')
         log(f'(send) Enviar: {data}')
@@ -110,10 +111,7 @@ class UDPSocketGBN:
         log('(send) Encapsulando payload')
         packet = struct.pack('II', self.sequence_number, self.expected_sequence_num) + data
         log('(send) Enviando paquete (unreliable)')
-
         self.socket.sendto(packet, self.address)
-        log('(send) Esperando ACK (bucle)')
-
         log('(send) fin send')
 
     def send_and_wait_for_ack(self, data):
@@ -133,6 +131,7 @@ class UDPSocketGBN:
                     if r > PACKET_LOSS:
                         data, address = self.socket.recvfrom(self.buffer_size)
                         ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
+                        log(f'ack_seq_num {ack_sequence_number}, self.expected_sequence_num {self.expected_sequence_num}')
                         if ack_sequence_number == self.expected_sequence_num:
                             self.expected_sequence_num += 1
                             self.sequence_number += 1
