@@ -68,8 +68,8 @@ class AppServer:
             return 0
 
         if self.port is None or int(self.port[0]) in COMMON_USE_PORTS or int(self.port[0]) <= 1023:
-            print("Unaveliable server port, using default port: 9001")
-            self.port = "2001"
+            print("Unaveliable server port, using default port: 2001")
+            self.port = ['2001']
 
         if self.host is None or not self.is_valid_addres(self.host[0]):
             print("Valid server address required, restart application and select an available address")
