@@ -24,7 +24,6 @@ class Client:
         nombre_archivo = 'test.txt'
         log(f'archivo: {nombre_archivo}')
 
-        # obtener tamaño del archivo
         operacion = 'upload'
         tamanio_archivo = os.stat(nombre_archivo).st_size
         log(f'El tamanio del archivo es: {tamanio_archivo}')
@@ -65,17 +64,7 @@ class Client:
         # enviamos FIN
         log('Enviamos FIN al servidor')
         # socket.close()
-        '''
-        payload = 'FIN'
-        self.socket.send(payload.encode())
 
-        # esperamos FINACK
-        mensaje, address = self.socket.receive()
-        print(f'Recibimos: {mensaje.decode()}')
-
-        print('Enviamos ACK')
-        #self.socket.send_and_wait_for_ack('ACK'.encode())
-        '''
         print('Fin del cliente')
 
 Client()

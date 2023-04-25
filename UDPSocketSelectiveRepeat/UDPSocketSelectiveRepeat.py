@@ -7,10 +7,6 @@ from math import ceil
 from logging import debug as db
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-from random import random
-
-PACKET_LOSS = 0
-
 
 def log(msg):
     db(f'[UdpSkt] {msg}')
@@ -27,10 +23,7 @@ class UDPSocketSelectiveRepeat:
         self.buffer_size = 1024
         self.header_size = 8
         self.send_retries = 15
-        self.packet_loss_counter = 0
-        self.packet_loss_activated = True
 
-    # LAS PILAS NO SE PUEDEN USAR EN EL MANEJADOR DE VENTANAS, PERO ACA SI
     def enviar_archivo(self, tamanio_archivo, archivo):
         header_size = 8
         cantidad_paquetes = ceil(tamanio_archivo / (self.buffer_size - header_size))
@@ -83,7 +76,7 @@ class UDPSocketSelectiveRepeat:
             self.expected_sequence_num += 1
             # abro otro paquete y lo agrego a la pila.
 
-        log('-__-------------------joining threads')
+        log('espero que los threads hijos se cierren')
 
         for t in threads:
             t.join()
@@ -120,20 +113,14 @@ class UDPSocketSelectiveRepeat:
             self.socket.settimeout(1.0)
             log('(send-ack-loop) Recibir respuesta (ACK)')
             try:
-                if self.packet_loss_activated:
-                    r = random()
-                    if r > PACKET_LOSS:
-                        data, address = self.socket.recvfrom(self.buffer_size)
-                        ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
-                        log(f'ack_seq_num {ack_sequence_number}, self.expected_sequence_num {self.expected_sequence_num}')
-                        if ack_sequence_number == self.expected_sequence_num:
-                            self.expected_sequence_num += 1
-                            self.sequence_number += 1
-                            break
-                    else:
-                        log(f'(send) PACKET_LOSS con prob: {r}')
-                        self.packet_loss_counter += 1
-                        log(f'(send) PAQUETES PERDIDOS: {self.packet_loss_counter}')
+                data, address = self.socket.recvfrom(self.buffer_size)
+                ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
+                log(f'ack_seq_num {ack_sequence_number}, self.expected_sequence_num {self.expected_sequence_num}')
+                if ack_sequence_number == self.expected_sequence_num:
+                    self.expected_sequence_num += 1
+                    self.sequence_number += 1
+                    break
+
             except socket.timeout:
                 log('(send-ack-loop) Timeout!')
                 self.socket.sendto(packet, self.address)
@@ -175,7 +162,7 @@ class UDPSocketSelectiveRepeat:
             # usamos un dic para contar asi validamos que se sume solo si el valor es nuevo
             # while len(ventanas_escuchadas) != len(canales_ventanas):
             while ventanas_escuchadas.keys() != canales_ventanas.keys():
-                log(f'================  ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
+                log(f'ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
                 log(f'{ventanas_escuchadas.keys()} ---- {canales_ventanas.keys()}')
                 data, address = self.socket.recvfrom(self.buffer_size)
                 log('(send-ack-loop) Desempaquetar')
@@ -184,16 +171,16 @@ class UDPSocketSelectiveRepeat:
                 canal = canales_ventanas[ack_sequence_number]
                 canal.put(data)
                 # quizas hay una mejor forma de contar cuantos mensajes hay
-                #  pero asi nos aseguramos  que sume sii es un nuevo mensaje
+                #  pero asi nos aseguramos que sume sii es un nuevo mensaje
                 ventanas_escuchadas[ack_sequence_number] = True
                 log(
                     f'(ACKs listener) escuche la siguiente cantidad de ACKs {len(ventanas_escuchadas)} / {len(canales_ventanas)}'
                 )
         except socket.timeout:
             canal_respuestas.put("TIMEOUT")
-            log('(ACKs listener) no llego ningun ACK en mucho tiempo, cierro todo')
+            log('(ACKs listener) no llego ningun ACK en mucho tiempo, cierro el thread e inicio protocolo de cierre')
 
-        log(f'=======ÑÑÑÑ=====  ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
+        log(f'ventanas_escuchadas: {len(ventanas_escuchadas)}, canales_ventanas: {len(canales_ventanas)}')
 
     def receive(self):
         self.socket.settimeout(None)
