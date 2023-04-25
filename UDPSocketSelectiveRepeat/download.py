@@ -15,7 +15,7 @@ def log(msg):
 class Download:
     def __init__(self):
         log('(start)')
-        self.server_address = "127.0.0.1"
+        self.server_address = "10.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
         log('Socket creado')
@@ -36,7 +36,6 @@ class Download:
         log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
         while True:
             mensaje, address,seq_number = self.socket.receive()
-
             if mensaje:
                 break
 
@@ -56,6 +55,13 @@ class Download:
             while not ordenadorDePaquetes.is_full():
                 log(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
                 mensaje, address, seq_number = self.socket.receive()
+                if mensaje and 'CONECTADO|' in mensaje.decode():
+                    log('el cliente volvió a recibir CONECTADO\nenviando ACK')
+                    import struct
+                    ack_packet = struct.pack('II', seq_number, 0)
+                    # send UDP puro
+                    self.socket.socket.sendto(ack_packet, address)
+                    continue
                 # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
                 if mensaje is not None and seq_number is not None:
                     log(f'De: {address}')
