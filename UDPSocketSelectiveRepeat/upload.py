@@ -1,6 +1,5 @@
 import os
 import logging
-from math import ceil
 from logging import debug as db
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
@@ -15,15 +14,13 @@ class Upload:
 
     def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt', path='/.'):
         log('start')
-
-
         self.server_address = server_ip
         self.server_port = server_port
         log((self.server_address, self.server_port))
         self.socket = UDPSocket((self.server_address, self.server_port))
         self.filename = filename
         self.path = path
-        return
+        raise Exception
         self.run()
 
     def run(self):

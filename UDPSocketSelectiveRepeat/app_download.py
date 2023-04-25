@@ -1,7 +1,6 @@
 import argparse
 import ipaddress
 import download
-import upload
 
 COMMON_USE_PORTS = [20, 21, 22, 25, 53, 80, 123, 179, 443, 511, 587, 3389]
 HELP_STRING = "" \

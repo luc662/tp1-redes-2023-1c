@@ -80,7 +80,6 @@ class AppServer:
             print("path not setted, will use default ./")
             self.path = ['./']
 
-
         Server(self.host[0], int(self.port[0]), self.path[0])
 
 
