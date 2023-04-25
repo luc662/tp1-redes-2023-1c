@@ -91,9 +91,9 @@ class App:
 
         # aca habria que mandar la accion al cliente y sabemos q es valida, pero npi como hacer eso correctamente
         if self.action == "download":
-            download.Download(self.host[0], self.port[0], self.action)
+            download.Download(self.host[0], self.port[0])
         elif self.action == "upload":
-            upload.Upload(self.host[0], self.port[0], self.action)
+            upload.Upload(self.host[0], self.port[0])
 
 
 App().run()
