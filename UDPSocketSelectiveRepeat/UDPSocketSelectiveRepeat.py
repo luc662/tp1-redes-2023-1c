@@ -148,7 +148,7 @@ class UDPSocketSelectiveRepeat:
                 log('(send-ack-loop) Timeout!')
                 self.socket.sendto(packet, self.address)
         else:
-            raise Exception('Unreacheable')
+            raise Exception
 
     # esta parte escucha la llegada de acks a la estructura
     # funciona como un cartero, recibe las cartas y las envia a quien corresponda

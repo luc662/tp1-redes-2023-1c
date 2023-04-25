@@ -25,10 +25,9 @@ class Download:
 
     def run(self):
         log('(run)')
-        nombre_archivo = 'test.txt'
         operacion = 'download'
         log(f'Armando mensaje de capa de app:')
-        mensaje = f'{operacion}|{nombre_archivo}'
+        mensaje = f'{operacion}|{self.filename}'
         log(f'Mensaje: {mensaje}')
         log('Enviando')
         self.socket.send_and_wait_for_ack(mensaje.encode())
@@ -49,11 +48,11 @@ class Download:
         log(f'Respuesta del servidor: {mensaje.decode()}')
 
         assert status == 'CONECTADO'
-        assert filename == nombre_archivo
+        assert filename == self.filename
 
         log('Continuamos en el upload')
 
-        with open(f'{self.path+nombre_archivo}', 'wb') as archivo:
+        with open(f'{self.path+self.filename}', 'wb') as archivo:
             iters = ceil(int(filesize) / (self.socket.buffer_size - 8))
 
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(filesize) / (self.socket.buffer_size - 8)))

@@ -40,19 +40,20 @@ class ClientThread:
     
     def download(self, params):
         logCT('Aceptamos peticion. Enviamos CONECTADO')
-        nombre_archivo = params[0]
-        logCT(f'Nombre archivo: {nombre_archivo}')
-        tamanio_archivo = os.stat(nombre_archivo).st_size
+        self.filename = params[0]
+        logCT(f'Nombre archivo: {self.filename}')
+        archivo = self.path + self.filename
+        tamanio_archivo = os.stat(archivo).st_size
 
-        data = self.socket.send_and_wait_for_ack(f'CONECTADO|{nombre_archivo}|{str(tamanio_archivo)}'.encode())
+        data = self.socket.send_and_wait_for_ack(f'CONECTADO|{self.filename}|{str(tamanio_archivo)}'.encode())
 
         logCT(f'El tamanio del archivo es: {tamanio_archivo}')
         logCT(f'Armando mensaje de capa de app:')
 
-        nombre_archivo = self.path + nombre_archivo
+        nombre_archivo = self.path + self.filename
 
         with open(f'{nombre_archivo}', 'rb') as archivo:
-            logCT(f': {self.path+nombre_archivo}')
+            logCT(f': {nombre_archivo}')
             # esto lo movemos un paso mas adentro al socket
             header_size = 8
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
@@ -82,9 +83,9 @@ class ClientThread:
                 break
 
     def upload(self, parametros):
-        nombre_archivo = parametros[0]
+        filename = parametros[0]
         tamanio_archivo = parametros[1]
-        logCT(f'Nombre archivo: {nombre_archivo}')
+        logCT(f'Nombre archivo: {filename}')
         logCT(f'Tamanio del archivo: {tamanio_archivo}')
 
         logCT('Aceptamos peticion. Enviamos CONECTADO')
@@ -94,7 +95,7 @@ class ClientThread:
             return
 
         logCT('Esperamos recibir mas datos:')
-        with open(f'{self.path+nombre_archivo}', 'wb') as archivo:
+        with open(f'{self.path+filename}', 'wb') as archivo:
             iters = ceil(int(tamanio_archivo) / (self.socket.buffer_size - 8))
 
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(tamanio_archivo) / (self.socket.buffer_size - 8)))
@@ -167,12 +168,12 @@ class Server:
 
         log(f'Operacion: {tipo_operacion}')
         if tipo_operacion == 'upload':
-            nombre_archivo = l[1]
+            self.filename = l[1]
             tamanio_archivo = int(l[2])
-            params = [nombre_archivo, tamanio_archivo]
+            params = [self.filename, tamanio_archivo]
         elif tipo_operacion == 'download':
-            nombre_archivo = l[1]
-            params = [nombre_archivo]
+            self.filename = l[1]
+            params = [self.filename]
 
         log('Iniciando thread')
         client = ClientThread(client_socket, tipo_operacion, self.path , params)

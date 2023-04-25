@@ -24,15 +24,15 @@ class Upload:
 
     def run(self):
         log('(run)')
-        nombre_archivo = 'test.txt'
-        log(f'archivo: {nombre_archivo}')
+        log(f'archivo: {self.filename}')
 
         # obtener tamaño del archivo
         operacion = 'upload'
-        tamanio_archivo = os.stat(nombre_archivo).st_size
+        archivo = self.path + self.filename
+        tamanio_archivo = os.stat(archivo).st_size
         log(f'El tamanio del archivo es: {tamanio_archivo}')
         log(f'Armando mensaje de capa de app:')
-        mensaje = f'{operacion}|{nombre_archivo}|{str(tamanio_archivo)}'
+        mensaje = f'{operacion}|{self.filename}|{str(tamanio_archivo)}'
         # borrar esto de abajo, y arreglar en server (upload)
         mensaje += f'|{str(len(mensaje))}'
         log(f'Mensaje: {mensaje}')
@@ -53,8 +53,8 @@ class Upload:
 
         log('Continuamos en el upload')
 
-        with open(self.path + nombre_archivo, 'rb') as archivo:
-            log(f'Abriendo archivo: {nombre_archivo}')
+        with open(self.path + self.filename, 'rb') as archivo:
+            log(f'Abriendo archivo: {self.filename}')
             self.socket.enviar_archivo(tamanio_archivo, archivo)
 
             log('Cerrar archivo')
