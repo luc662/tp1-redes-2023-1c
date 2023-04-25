@@ -12,12 +12,13 @@ def log(msg):
 
 
 class Download:
-    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt'):
+    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt', path='/.'):
         log('start')
         self.server_address = server_ip
         self.server_port = server_port
         self.socket = UDPSocket((self.server_address, self.server_port))
         self.filename = filename
+        self.path = path
         self.run()
 
     def run(self):
@@ -36,9 +37,8 @@ class Download:
         log(f'status: {status}')
 
         assert status == 'CONECTADO'
-        assert filename == self.filename
 
-        with open(f'client_{self.filename}', 'wb') as archivo:
+        with open(f'{self.path+self.filename}', 'wb') as archivo:
             iters = ceil(int(filesize) / (self.socket.buffer_size - self.socket.header_size))
             i = 0
             while i < iters:
@@ -75,4 +75,4 @@ class Download:
         log('fin cliente')
 
 
-Download()
+#Download()

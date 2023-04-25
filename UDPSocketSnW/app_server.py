@@ -30,7 +30,7 @@ class AppServer:
         self.parser.add_argument("-h", "--help", help="show help", action="store_true")
         self.parser.add_argument("-H", "--host", type=str, help="server IP address", nargs=1, metavar="ADDR")
         self.parser.add_argument("-p", "--port", type=str, help="server port", nargs=1, metavar="PORT")
-        self.parser.add_argument("-s", "--dst", type=str, help="destination file path", nargs=1, metavar="PATH")
+        self.parser.add_argument("-s", "--dst", type=str, help="file path", nargs=1, metavar="PATH")
         group = self.parser.add_mutually_exclusive_group()
         group.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
         group.add_argument("-q", "--quiet", help="decrease output verbosity", action="store_false")
@@ -40,8 +40,7 @@ class AppServer:
         self.host = args.host
         self.port = args.port
         # no se si es esto solo
-        self.path = args.path
-        self.destination = args.dst
+        self.path = args.dst
         self.quiet = args.quiet
         self.verbose = args.verbose
 
@@ -50,7 +49,6 @@ class AppServer:
         print(f"Host: {self.host}")
         print(f"Port: {self.port}")
         print(f"Path: {self.path}")
-        print(f"Destination: {self.destination}")
         print(f"Quiet: {self.quiet}")
         print(f"Verbose: {self.verbose}")
 
@@ -82,9 +80,7 @@ class AppServer:
             print("path not setted, will use default ./")
             self.path = ['./']
 
-        # falta correr el server
-
-        Server(self.host, self.port[0], self.storage[0], self.path[0])
+        Server(self.host[0], int(self.port[0]), self.path[0])
 
 
 AppServer().run()

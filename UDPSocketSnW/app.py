@@ -36,7 +36,9 @@ class App:
         self.parser.add_argument("-H", "--host", type=str, help="server IP address", nargs=1, metavar="ADDR")
         self.parser.add_argument("-p", "--port", type=str, help="server port", nargs=1, metavar="PORT")
         self.parser.add_argument("-n", "--name", type=str, help="file name", nargs=1, metavar="FILENAME")
-        self.parser.add_argument("-d", "--dst", type=str, help="destination file path", nargs=1, metavar="PATH")
+        paths = self.parser.add_mutually_exclusive_group()
+        paths.add_argument("-d", "--dst", type=str, help="destination file path", nargs=1, metavar="DOWNLOAD PATH")
+        paths.add_argument("-s", "--src", type=str, help="source file path", nargs=1, metavar="UPLOAD PATH")
         group = self.parser.add_mutually_exclusive_group()
         group.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
         group.add_argument("-q", "--quiet", help="decrease output verbosity", action="store_false")
@@ -47,6 +49,7 @@ class App:
         self.host = args.host
         self.port = args.port
         self.name = args.name
+        self.source = args.src
         self.destination = args.dst
         self.quiet = args.quiet
         self.verbose = args.verbose
@@ -58,6 +61,7 @@ class App:
         print(f"Port: {self.port}")
         print(f"Name: {self.name}")
         print(f"Destination: {self.destination}")
+        print(f"Source: {self.source}")
         print(f"Quiet: {self.quiet}")
         print(f"Verbose: {self.verbose}")
 
@@ -77,6 +81,14 @@ class App:
             print("invalid action, please use 'upload' or 'download' command")
             return 0
 
+        if self.action == "download" and self.source is not None:
+            print("Source given, use -d for download")
+            return 0
+
+        if self.action == "upload" and self.destination is not None:
+            print("Destination given, using -s for upload")
+            return 0
+
         if self.help_mode:
             print(HELP_STRING)
             return 0
@@ -89,11 +101,18 @@ class App:
             print("Valid server address required, restart application and select an available address")
             return 0
 
+        if self.name is None:
+            print("No file name provided")
+            return 0
+        if self.destination is None and self.action == "download":
+            print("No destination name provided for download")
+            return 0
+
         # aca habria que mandar la accion al cliente y sabemos q es valida, pero npi como hacer eso correctamente
         if self.action == "download":
-            download.Download(self.host[0], self.port[0])
+            download.Download(self.host[0], int(self.port[0]), self.name[0], self.destination[0])
         elif self.action == "upload":
-            upload.Upload(self.host[0], self.port[0])
+            upload.Upload(self.host[0], int(self.port[0]), self.name[0])
 
 
 App().run()

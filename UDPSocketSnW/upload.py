@@ -80,4 +80,4 @@ class Upload:
         self.cerrar()
 
 
-Upload()
+#Upload()
