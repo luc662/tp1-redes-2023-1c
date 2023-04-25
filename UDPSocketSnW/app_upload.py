@@ -97,7 +97,7 @@ class App:
             print("No Source path provided for upload")
             return 0
 
-        upload.Upload(self.host[0], int(self.port[0]), self.name[0])
+        upload.Upload(self.host[0], int(self.port[0]), self.name[0], self.source[0])
 
 
 App().run()

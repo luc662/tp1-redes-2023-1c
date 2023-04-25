@@ -13,12 +13,13 @@ def log(msg):
 
 class Upload:
 
-    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt'):
+    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt', path='/.'):
         log('start')
         self.server_address = server_ip
         self.server_port = server_port
         self.socket = UDPSocket((self.server_address, self.server_port))
         self.filename = filename
+        self.path = path
         self.run()
 
     def cerrar(self):
@@ -48,7 +49,7 @@ class Upload:
     def run(self):
         log('upload')
         operacion = 'upload'
-        tamanio_archivo = os.stat(self.filename).st_size
+        tamanio_archivo = os.stat(self.path +self.filename).st_size
         mensaje = f'{operacion}|{self.filename}|{str(tamanio_archivo)}'
         log('Armando Peticion al Servidor')
         self.socket.send(mensaje.encode())
@@ -67,7 +68,7 @@ class Upload:
         assert mensaje.decode() == 'CONECTADO'
 
         log('Abriendo archivo para lectura')
-        with open(self.filename, 'rb') as archivo:
+        with open(self.path + self.filename, 'rb') as archivo:
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - self.socket.header_size))
             log(f'Cantidad de paquetes a enviar: {iters}')
             for i in range(iters):
