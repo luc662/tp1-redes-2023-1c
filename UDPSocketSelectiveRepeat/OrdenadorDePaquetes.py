@@ -7,7 +7,7 @@ import signal
 
 
 # custom class wrapping a list in order to make it thread safe
-class ThreadSafeList():
+class OrdenadorDePaquetes():
 
     # constructor
     def __init__(self, blocks):
@@ -16,6 +16,7 @@ class ThreadSafeList():
         # initialize the lock
         self._lock = Lock()
         self.blocks = blocks
+        self.blocks_occupied = 0
 
         for i in range(blocks):
             self._list.append(None)
@@ -25,13 +26,16 @@ class ThreadSafeList():
         # acquire the lock
         with self._lock:
             # append the value
-            self._list[id] = value
+            if not self._list[id]:
+                self._list[id] = value
+                self.blocks_occupied += 1
 
     # remove and return the last value from the list
     def pop(self):
         # acquire the lock
         with self._lock:
             # pop a value from the list
+            self.blocks_occupied -= 1
             return self._list.pop()
 
     # read a value from the list at an index
@@ -47,6 +51,12 @@ class ThreadSafeList():
         with self._lock:
             return len(self._list)
 
+    def is_full(self):
+        return self.blocks_occupied == self.blocks
+
+    def is_empty(self):
+        return self.blocks_occupied == 0
+
 
 # add items to the list
 def add_items(lista):
@@ -61,9 +71,9 @@ def remove_items(lista):
         print("Hacemos un pop:", i)
 
 
-
+''' 
 # create the thread safe list
-safe_list = ThreadSafeList(10000)
+safe_list = OrdenadorDePaquetes(10000)
 # configure threads to add to the list
 thread1 = Thread(target=add_items, args=(safe_list,))
 thread2 = Thread(target=remove_items, args=(safe_list,))
@@ -78,4 +88,4 @@ thread2.join()
 
 # report the number of items in the list
 print(f'List size: {safe_list.length()}')
-
+'''
