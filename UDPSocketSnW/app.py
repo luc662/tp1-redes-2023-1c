@@ -1,27 +1,28 @@
 import argparse
 import ipaddress
-from client import Client
+import download
+import upload
 
 COMMON_USE_PORTS = [20, 21, 22, 25, 53, 80, 123, 179, 443, 511, 587, 3389]
 HELP_STRING = "" \
               "usage : download [ - h ] [ -v | -q ] [ - H ADDR ] [ - p PORT ] [ - d FILEPATH ] [ - n FILENAME ]" \
-                "\n"\
+              "\n" \
               "< command description > " \
               "\n" \
-              "optional arguments :"\
-              "\n"\
+              "optional arguments :" \
+              "\n" \
               "-h , --help       show this help message and exit" \
-                "\n"\
+              "\n" \
               "-v , --verbose    increase output verbosity" \
-                "\n"\
+              "\n" \
               "-q , --quiet      decrease output verbosity" \
-                "\n"\
+              "\n" \
               "-H , --host       server IP address" \
-                "\n"\
+              "\n" \
               "-p , --port       server port" \
-                "\n"\
+              "\n" \
               "-d , --dst        destination file path" \
-                "\n"\
+              "\n" \
               "-n , --name       file name"
 
 
@@ -31,7 +32,7 @@ class App:
         self.parser = argparse.ArgumentParser(add_help=False)
 
         self.parser.add_argument("clientAction", help="client action")
-        self.parser.add_argument("-h", "--help",  help="show help", action="store_true")
+        self.parser.add_argument("-h", "--help", help="show help", action="store_true")
         self.parser.add_argument("-H", "--host", type=str, help="server IP address", nargs=1, metavar="ADDR")
         self.parser.add_argument("-p", "--port", type=str, help="server port", nargs=1, metavar="PORT")
         self.parser.add_argument("-n", "--name", type=str, help="file name", nargs=1, metavar="FILENAME")
@@ -89,6 +90,10 @@ class App:
             return 0
 
         # aca habria que mandar la accion al cliente y sabemos q es valida, pero npi como hacer eso correctamente
-        Client(self.host[0], self.port[0], self.action)
+        if self.action == "download":
+            download.Download(self.host[0], self.port[0], self.action)
+        elif self.action == "upload":
+            upload.Upload(self.host[0], self.port[0], self.action)
+
 
 App().run()

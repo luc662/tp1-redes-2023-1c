@@ -6,16 +6,18 @@ from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from UDPSocketSnW import UDPSocketSnW as UDPSocket
 
+
 def log(msg):
     db(f'[Client] {msg}')
 
-class Client:
-    def __init__(self):
+
+class Download:
+    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt'):
         log('start')
-        self.server_address = "10.0.0.1"
-        self.server_port = 2001
+        self.server_address = server_ip
+        self.server_port = server_port
         self.socket = UDPSocket((self.server_address, self.server_port))
-        self.filename = 'server_test.txt'
+        self.filename = filename
         self.run()
 
     def run(self):
@@ -29,7 +31,7 @@ class Client:
         self.socket.expected_sequence_num = 0
         mensaje, address = self.socket.recieve()
         self.socket.address = address
-        [status,filename,filesize] = mensaje.decode().split('|')
+        [status, filename, filesize] = mensaje.decode().split('|')
 
         log(f'status: {status}')
 
@@ -40,12 +42,12 @@ class Client:
             iters = ceil(int(filesize) / (self.socket.buffer_size - self.socket.header_size))
             i = 0
             while i < iters:
-                log(f'Recibiendo paquete {i+1}/{iters}')
+                log(f'Recibiendo paquete {i + 1}/{iters}')
                 bytes, address = self.socket.recieve()
                 if bytes:
                     i += 1
                     archivo.write(bytes)
-        
+
         self.cerrar()
 
     def cerrar(self):
@@ -72,4 +74,5 @@ class Client:
 
         log('fin cliente')
 
-Client()
+
+Download()

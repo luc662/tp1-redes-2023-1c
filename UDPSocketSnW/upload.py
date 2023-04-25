@@ -6,16 +6,19 @@ from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from UDPSocketSnW import UDPSocketSnW as UDPSocket
 
+
 def log(msg):
     db(f'[Client] {msg}')
 
-class Client:
-    def __init__(self):
+
+class Upload:
+
+    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt'):
         log('start')
-        self.server_address = "10.0.0.1"
-        self.server_port = 2001
+        self.server_address = server_ip
+        self.server_port = server_port
         self.socket = UDPSocket((self.server_address, self.server_port))
-        self.filename = 'test.txt'
+        self.filename = filename
         self.run()
 
     def cerrar(self):
@@ -68,7 +71,7 @@ class Client:
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - self.socket.header_size))
             log(f'Cantidad de paquetes a enviar: {iters}')
             for i in range(iters):
-                log(f'Enviando paquete {i+1}/{iters}')
+                log(f'Enviando paquete {i + 1}/{iters}')
                 bytes = archivo.read(self.socket.buffer_size - self.socket.header_size)
                 self.socket.send(bytes)
 
@@ -76,4 +79,5 @@ class Client:
 
         self.cerrar()
 
-Client()
+
+Upload()
