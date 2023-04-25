@@ -2,7 +2,7 @@ from mininet.topo import Topo
 from mininet.link import TCLink
 
 hosts_num = 2
-LOSS = 30
+LOSS = 15
 
 class MyTopo(Topo):
     def __init__(self):
