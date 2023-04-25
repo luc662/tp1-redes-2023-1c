@@ -13,7 +13,7 @@ def log(msg):
 class Upload:
     def __init__(self):
         log('(start)')
-        self.server_address = "127.0.0.1"
+        self.server_address = "10.0.0.1"
         self.server_port = 2001
         self.socket = UDPSocket((self.server_address, self.server_port))
         log('Socket creado')
@@ -30,6 +30,7 @@ class Upload:
         log(f'El tamanio del archivo es: {tamanio_archivo}')
         log(f'Armando mensaje de capa de app:')
         mensaje = f'{operacion}|{nombre_archivo}|{str(tamanio_archivo)}'
+        # borrar esto de abajo, y arreglar en server (upload)
         mensaje += f'|{str(len(mensaje))}'
         log(f'Mensaje: {mensaje}')
         log('Enviando')
@@ -42,9 +43,10 @@ class Upload:
             mensaje, address, seq_number = self.socket.receive()
             if mensaje:
                 break
-        log(f'Respuesta del servidor: {mensaje.decode()}')
 
         assert mensaje.decode() == 'CONECTADO'
+        log(f'Respuesta de: {address}')
+        self.socket.address = address
 
         log('Continuamos en el upload')
 

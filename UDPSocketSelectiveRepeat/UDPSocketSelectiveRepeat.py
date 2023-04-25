@@ -26,7 +26,7 @@ class UDPSocketSelectiveRepeat:
         self.expected_sequence_num = 0
         self.buffer_size = 1024
         self.header_size = 8
-        self.send_retries = 10
+        self.send_retries = 15
         self.packet_loss_counter = 0
         self.packet_loss_activated = True
 
@@ -39,7 +39,7 @@ class UDPSocketSelectiveRepeat:
         for i in range(cantidad_paquetes):
             ventanas[i + self.sequence_number] = queue.Queue()
 
-        iters_inicial = min(cantidad_paquetes, 2)
+        iters_inicial = min(cantidad_paquetes, 5)
         log(f'Iters Inicial, Cantidad de paquetes  {iters_inicial, cantidad_paquetes}')
         # queue que este thread se queda escuchando
         queue_respuestas = queue.Queue()
@@ -138,7 +138,7 @@ class UDPSocketSelectiveRepeat:
                 log('(send-ack-loop) Timeout!')
                 self.socket.sendto(packet, self.address)
         else:
-            log('IMPLEMENTAR EXCEPTION')
+            raise Exception
         log('(send) fin send')
 
     # esta parte va a tratar de enviar un bloque de datos y se queda escuchando a su queue por respuestas de acks

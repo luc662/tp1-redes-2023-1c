@@ -37,19 +37,19 @@ class ClientThread:
         else: 
             raise Exception
     
-    def download(self, parametros):
-        log('Aceptamos peticion. Enviamos CONECTADO')
-        nombre_archivo = params[1]
-        log(f'Nombre archivo: {nombre_archivo}')
+    def download(self, params):
+        logCT('Aceptamos peticion. Enviamos CONECTADO')
+        nombre_archivo = params[0]
+        logCT(f'Nombre archivo: {nombre_archivo}')
         tamanio_archivo = os.stat(nombre_archivo).st_size
 
         data = self.socket.send_and_wait_for_ack(f'CONECTADO|{nombre_archivo}|{str(tamanio_archivo)}'.encode())
 
-        log(f'El tamanio del archivo es: {tamanio_archivo}')
-        log(f'Armando mensaje de capa de app:')
+        logCT(f'El tamanio del archivo es: {tamanio_archivo}')
+        logCT(f'Armando mensaje de capa de app:')
 
         with open(nombre_archivo, 'rb') as archivo:
-            log(f'Abriendo archivo: {nombre_archivo}')
+            logCT(f'Abriendo archivo: {nombre_archivo}')
             # esto lo movemos un paso mas adentro al socket
             header_size = 8
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
@@ -57,10 +57,10 @@ class ClientThread:
 
             log('Cerrar archivo')
 
-        log('Fin de la transmision del archivo')
-        log('Comenzamos cierre de conexion')
+        logCT('Fin de la transmision del archivo')
+        logCT('Comenzamos cierre de conexion')
 
-        log('Fin server')
+        logCT('Fin client thread')
 
     def cerrar(self):
         logCT('cerrar')
@@ -81,26 +81,29 @@ class ClientThread:
     def upload(self, parametros):
         nombre_archivo = parametros[0]
         tamanio_archivo = parametros[1]
-        log(f'Nombre archivo: {nombre_archivo}')
-        log(f'Tamanio del archivo: {tamanio_archivo}')
+        logCT(f'Nombre archivo: {nombre_archivo}')
+        logCT(f'Tamanio del archivo: {tamanio_archivo}')
 
-        log('Aceptamos peticion. Enviamos CONECTADO')
-        data = self.socket.send_and_wait_for_ack('CONECTADO'.encode())
+        logCT('Aceptamos peticion. Enviamos CONECTADO')
+        try:
+            data = self.socket.send_and_wait_for_ack('CONECTADO'.encode())
+        except Exception:
+            return
 
-        log('Esperamos recibir mas datos:')
+        logCT('Esperamos recibir mas datos:')
         with open(f'server_{nombre_archivo}', 'wb') as archivo:
             iters = ceil(int(tamanio_archivo) / (self.socket.buffer_size - 8))
 
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(tamanio_archivo) / (self.socket.buffer_size - 8)))
 
             while not ordenadorDePaquetes.is_full():
-                log(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
+                logCT(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
                 mensaje, address, seq_number = self.socket.receive()
                 # si leo el mensaje, corto este ciclo y voy a leer el siguiente bloque de archivo
                 if mensaje is not None and seq_number is not None:
-                    log(f'De: {address}')
-                    log(f'Tamanio: {len(mensaje)}')
-                    log(f'seq_number: {seq_number}')
+                    logCT(f'De: {address}')
+                    logCT(f'Tamanio: {len(mensaje)}')
+                    logCT(f'seq_number: {seq_number}')
                     ordenadorDePaquetes.add(seq_number - 1, mensaje)
 
             while True:
@@ -112,13 +115,12 @@ class ClientThread:
             for i in range(iters):
                 valor = ordenadorDePaquetes.get(i)
                 if not valor:
-                    log(f'No Hubo Mensaje: {i}')
-
+                    logCT(f'No Hubo Mensaje: {i}')
                 else:
                     archivo.write(ordenadorDePaquetes.get(i))
 
-        log('Fin del archivo')
-        log('Fin server')
+        logCT('Fin del archivo')
+        logCT('Fin client thread')
 
 class Server:
 
@@ -143,7 +145,7 @@ class Server:
     def listen(self):
         log('listen')
         while True:
-            mensaje, address = self.socket.recieve()
+            mensaje, address, seq_num = self.socket.receive()
             log(f'(listen) mensaje recibido {address}')
             if mensaje and address not in self.threads:
                 self.socket.expected_sequence_num = 0

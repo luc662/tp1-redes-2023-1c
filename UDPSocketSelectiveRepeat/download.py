@@ -35,9 +35,13 @@ class Download:
         log('Esperando respuesta del Servidor')
         log('Esperamos que nos diga CONECTADO (a nivel capa de app)')
         while True:
-            mensaje, address,seq_number = self.socket.receive()
+            mensaje, address, seq_number = self.socket.receive()
             if mensaje:
                 break
+
+        log(f'Recibimos respuesta de: {address}')
+        self.socket.address = address
+        #self.socket.sequence_number = 0
 
         [status, filename, filesize] = mensaje.decode().split('|')
         log(f'Respuesta del servidor: {mensaje.decode()}')
