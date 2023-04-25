@@ -7,7 +7,7 @@ from logging import debug as db
 from OrdenadorDePaquetes import OrdenadorDePaquetes
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-from UDPSocketSelectiveRepeat import UDPSocketGBN as UDPSocket
+from UDPSocketSelectiveRepeat import UDPSocketSelectiveRepeat as UDPSocket
 
 
 def logCT(msg):

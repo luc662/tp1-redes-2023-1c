@@ -16,7 +16,7 @@ def log(msg):
     db(f'[UdpSkt] {msg}')
 
 
-class UDPSocketGBN:
+class UDPSocketSelectiveRepeat:
 
     def __init__(self, address):
         log(f'(start) address: {address}')

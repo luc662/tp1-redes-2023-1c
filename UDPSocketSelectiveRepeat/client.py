@@ -4,7 +4,7 @@ from math import ceil
 from logging import debug as db
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-from UDPSocketSelectiveRepeat import UDPSocketGBN as UDPSocket
+from UDPSocketSelectiveRepeat import UDPSocketSelectiveRepeat as UDPSocket
 
 
 def log(msg):

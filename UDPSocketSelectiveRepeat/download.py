@@ -5,14 +5,14 @@ from logging import debug as db
 from OrdenadorDePaquetes import OrdenadorDePaquetes
 
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-from UDPSocketSelectiveRepeat import UDPSocketGBN as UDPSocket
+from UDPSocketSelectiveRepeat import UDPSocketSelectiveRepeat as UDPSocket
 
 
 def log(msg):
     db(f'[Client] {msg}')
 
 
-class Client:
+class Download:
     def __init__(self):
         log('(start)')
         self.server_address = "127.0.0.1"
@@ -61,6 +61,7 @@ class Client:
                     log(f'De: {address}')
                     log(f'Tamanio: {len(mensaje)}')
                     log(f'seq_number: {seq_number}')
+                    # cuando reinciemos los seq_number, sacar el -1
                     ordenadorDePaquetes.add(seq_number - 1, mensaje)
 
             while True:
@@ -82,4 +83,4 @@ class Client:
         print('Fin del cliente')
 
 
-Client()
+Download()
