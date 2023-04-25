@@ -93,6 +93,3 @@ class Download:
         log('Fin de la transmision del archivo')
         log('Comenzamos cierre de conexion')
         print('Fin del cliente')
-
-
-Download()

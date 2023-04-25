@@ -1,7 +1,6 @@
 import argparse
 import ipaddress
-import download
-from upload import Upload
+import upload
 from logging import Logger
 
 COMMON_USE_PORTS = [20, 21, 22, 25, 53, 80, 123, 179, 443, 511, 587, 3389]
@@ -98,8 +97,7 @@ class AppUpload:
             print("No Source path provided for upload")
             return 0
 
-        return 0
-        #upload.Upload(self.host[0], int(self.port[0]), self.name[0], self.source[0])
+        upload.Upload(self.host[0], int(self.port[0]), self.name[0], self.source[0])
 
 
 AppUpload().run()

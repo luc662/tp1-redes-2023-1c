@@ -49,8 +49,10 @@ class ClientThread:
         logCT(f'El tamanio del archivo es: {tamanio_archivo}')
         logCT(f'Armando mensaje de capa de app:')
 
-        with open(self.path+nombre_archivo, 'rb') as archivo:
-            logCT(f'Abriendo archivo: {self.path+nombre_archivo}')
+        nombre_archivo = self.path + nombre_archivo
+
+        with open(f'{nombre_archivo}', 'rb') as archivo:
+            logCT(f': {self.path+nombre_archivo}')
             # esto lo movemos un paso mas adentro al socket
             header_size = 8
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
@@ -173,7 +175,7 @@ class Server:
             params = [nombre_archivo]
 
         log('Iniciando thread')
-        client = ClientThread(client_socket, tipo_operacion, path , params)
+        client = ClientThread(client_socket, tipo_operacion, self.path , params)
         self.threads[address] = client
         log('Iniciado')
 

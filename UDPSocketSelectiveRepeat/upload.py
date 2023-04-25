@@ -20,7 +20,6 @@ class Upload:
         self.socket = UDPSocket((self.server_address, self.server_port))
         self.filename = filename
         self.path = path
-        raise Exception
         self.run()
 
     def run(self):
