@@ -3,14 +3,18 @@ import threading
 import os
 from math import ceil
 from logging import debug as db
+
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from UDPSocketSnW import UDPSocketSnW as UDPSocket
+
 
 def logCT(msg):
     db(f'[CThread] {msg}')
 
+
 def log(msg):
     db(f'[Server] {msg}')
+
 
 class ClientThread:
     def __init__(self, socket, operacion, params):
@@ -20,7 +24,7 @@ class ClientThread:
         ip = self.socket.address[0]
         port = self.socket.address[1]
         self.operacion = {
-            'upload': self.upload, 
+            'upload': self.upload,
             'download': self.download
         }
         logCT(f'Nuevo cliente en {ip}:{port}')
@@ -30,11 +34,11 @@ class ClientThread:
         logCT('run')
         if operacion in self.operacion:
             self.operacion[operacion](params)
-        else: 
+        else:
             raise Exception
-        
+
         self.cerrar()
-    
+
     def download(self, parametros):
         logCT('download')
         [nombre_archivo] = parametros
@@ -44,12 +48,12 @@ class ClientThread:
         self.socket.send(f'CONECTADO|{nombre_archivo}|{str(tamanio_archivo)}'.encode())
 
         logCT('Abro archivo para empezar a leer')
-        with open(f'{nombre_archivo}','rb') as archivo:
-            iters = ceil(tamanio_archivo/(self.socket.buffer_size - self.socket.header_size))
+        with open(f'{nombre_archivo}', 'rb') as archivo:
+            iters = ceil(tamanio_archivo / (self.socket.buffer_size - self.socket.header_size))
             logCT(f'Cantidad de paquetes a enviar: {iters}')
             for i in range(iters):
-                logCT(f'Enviando paquete {i+1}/{iters}')
-                bytes = archivo.read(self.socket.buffer_size-self.socket.header_size)
+                logCT(f'Enviando paquete {i + 1}/{iters}')
+                bytes = archivo.read(self.socket.buffer_size - self.socket.header_size)
                 self.socket.send(bytes)
                 logCT('Enviado')
         logCT('fin download')
@@ -60,7 +64,7 @@ class ClientThread:
             mensaje, address = self.socket.recieve()
             if mensaje:
                 break
-        
+
         assert mensaje.decode() == 'CERRAR'
 
         self.socket.send('CERRAROK'.encode())
@@ -79,12 +83,12 @@ class ClientThread:
         self.socket.send('CONECTADO'.encode())
 
         logCT('Abro archivo para empezar a escribir')
-        with open(f'server_{self.socket.address[1]}_{nombre_archivo}','wb') as archivo:
-            iters = ceil(tamanio_archivo/(self.socket.buffer_size - self.socket.header_size))
+        with open(f'server_{self.socket.address[1]}_{nombre_archivo}', 'wb') as archivo:
+            iters = ceil(tamanio_archivo / (self.socket.buffer_size - self.socket.header_size))
             logCT(f'Cantidad de paquetes a recibir: {iters}')
             i = 0
             while i < iters:
-                logCT(f'Recibiendo paquete {i+1}/{iters}')
+                logCT(f'Recibiendo paquete {i + 1}/{iters}')
                 mensaje, address = self.socket.recieve()
                 if mensaje:
                     i += 1
@@ -92,15 +96,14 @@ class ClientThread:
 
         logCT('fin upload')
 
+
 class Server:
 
-    def __init__(self):
+    def __init__(self, ip='10.0.0.1', port=2001, storage='./'):
         log('start')
-        UDP_IP = '10.0.0.1'
-        UDP_PORT = 2001
 
         self.socket = UDPSocket(None)
-        self.socket.bind((UDP_IP, UDP_PORT))
+        self.socket.bind((ip, port))
         self.threads = {}
 
         self.run()
@@ -108,7 +111,7 @@ class Server:
     def cerrar(self):
         log('cerrar')
         log('Esperando a que terminen los threads:')
-        #for thread in self.threads:
+        # for thread in self.threads:
         #    thread.join()
         log('Threads cerrados!')
 
@@ -156,5 +159,6 @@ class Server:
 
         self.cerrar()
         log('Fin')
+
 
 Server()
