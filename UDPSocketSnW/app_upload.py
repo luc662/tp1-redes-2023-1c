@@ -2,12 +2,13 @@ import argparse
 import ipaddress
 import download
 import upload
+from logging import Logger
 
 COMMON_USE_PORTS = [20, 21, 22, 25, 53, 80, 123, 179, 443, 511, 587, 3389]
 HELP_STRING = "" \
-              "usage : download [ - h ] [ -v | -q ] [ - H ADDR ] [ - p PORT ] [ - d FILEPATH ] [ - n FILENAME ]" \
+              "usage : upload [ - h ] [ -v | -q ] [ - H ADDR ] [ - p PORT ] [ - s FILEPATH ] [ - n FILENAME ]" \
               "\n" \
-              "< command description > " \
+              " Upload a file in file destination " \
               "\n" \
               "optional arguments :" \
               "\n" \
@@ -21,7 +22,7 @@ HELP_STRING = "" \
               "\n" \
               "-p , --port       server port" \
               "\n" \
-              "-d , --dst        destination file path" \
+              "-s , --src        Source file path" \
               "\n" \
               "-n , --name       file name"
 
@@ -31,36 +32,33 @@ class App:
     def __init__(self):
         self.parser = argparse.ArgumentParser(add_help=False)
 
-        self.parser.add_argument("clientAction", help="client action")
         self.parser.add_argument("-h", "--help", help="show help", action="store_true")
         self.parser.add_argument("-H", "--host", type=str, help="server IP address", nargs=1, metavar="ADDR")
         self.parser.add_argument("-p", "--port", type=str, help="server port", nargs=1, metavar="PORT")
         self.parser.add_argument("-n", "--name", type=str, help="file name", nargs=1, metavar="FILENAME")
         paths = self.parser.add_mutually_exclusive_group()
-        paths.add_argument("-d", "--dst", type=str, help="destination file path", nargs=1, metavar="DOWNLOAD PATH")
         paths.add_argument("-s", "--src", type=str, help="source file path", nargs=1, metavar="UPLOAD PATH")
         group = self.parser.add_mutually_exclusive_group()
         group.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
         group.add_argument("-q", "--quiet", help="decrease output verbosity", action="store_false")
 
         args = self.parser.parse_args()
-        self.action = args.clientAction
         self.help_mode = args.help
         self.host = args.host
         self.port = args.port
         self.name = args.name
         self.source = args.src
-        self.destination = args.dst
+
         self.quiet = args.quiet
         self.verbose = args.verbose
 
     def print_arguments(self):
-        print(f"Action: {self.action}")
+        #print(f"Action: {self.action}")
         print(f"Help: {self.help_mode}")
         print(f"Host: {self.host}")
         print(f"Port: {self.port}")
         print(f"Name: {self.name}")
-        print(f"Destination: {self.destination}")
+        #print(f"Destination: {self.destination}")
         print(f"Source: {self.source}")
         print(f"Quiet: {self.quiet}")
         print(f"Verbose: {self.verbose}")
@@ -77,21 +75,11 @@ class App:
         # todo limitar el tamaño del archivo y chequear directorio
         self.print_arguments()
 
-        if self.action != "download" and self.action != "upload":
-            print("invalid action, please use 'upload' or 'download' command")
-            return 0
-
-        if self.action == "download" and self.source is not None:
-            print("Source given, use -d for download")
-            return 0
-
-        if self.action == "upload" and self.destination is not None:
-            print("Destination given, using -s for upload")
-            return 0
-
         if self.help_mode:
             print(HELP_STRING)
             return 0
+        if self.quiet is not None:
+            Logger.disabled = True
 
         if self.port is None or int(self.port[0]) in COMMON_USE_PORTS or int(self.port[0]) <= 1023:
             print("Unaveliable server port, using default port: 2001")
@@ -104,15 +92,12 @@ class App:
         if self.name is None:
             print("No file name provided")
             return 0
-        if self.destination is None and self.action == "download":
-            print("No destination name provided for download")
+
+        if self.source is None:
+            print("No Source path provided for upload")
             return 0
 
-        # aca habria que mandar la accion al cliente y sabemos q es valida, pero npi como hacer eso correctamente
-        if self.action == "download":
-            download.Download(self.host[0], int(self.port[0]), self.name[0], self.destination[0])
-        elif self.action == "upload":
-            upload.Upload(self.host[0], int(self.port[0]), self.name[0])
+        upload.Upload(self.host[0], int(self.port[0]), self.name[0])
 
 
 App().run()
