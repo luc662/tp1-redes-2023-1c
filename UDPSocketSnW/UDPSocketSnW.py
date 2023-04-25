@@ -5,11 +5,9 @@ from logging import debug as db
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 from random import random
 
-PACKET_LOSS = 0
-
 class DestinoInaccesible(Exception):
     def __init__(self):
-        self.Exception.__init__()
+        super().__init__()
 
 def log(msg):
     db(f'[UdpSkt] {msg}')
@@ -23,9 +21,7 @@ class UDPSocketSnW:
         self.expected_sequence_num = 0
         self.buffer_size = 1024
         self.header_size = 8
-        self.send_retries = 15
-        self.packet_loss_counter = 0
-        self.packet_loss_activated = True
+        self.send_retries = 23
 
     def send(self, data):
         log('send')
@@ -40,22 +36,13 @@ class UDPSocketSnW:
             self.socket.settimeout(1.0)
             log('(send-ack-loop) Recibir respuesta (ACK)')
             try:
-                if self.packet_loss_activated:
-                    r = random()
-                    if r > PACKET_LOSS:
-                        log('(send-ack-loop) esperando ack')
-                        data, address = self.socket.recvfrom(self.buffer_size)
-                        log(f'(send-ack-loop) recibimos de: {address}, data:{data}')
-                        ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
-                        log(f'(send-ack-loop) recibimos seq_num: {ack_sequence_number}, expected: {ack_expected_seq_number}')
-                        #if ack_sequence_number == self.expected_sequence_num:
-                        self.expected_sequence_num += 1
-                        self.sequence_number += 1
-                        break
-                    else:
-                        log(f'(send) PACKET_LOSS con prob: {r}')
-                        self.packet_loss_counter += 1
-                        log(f'(send) Paquetes perdidos: {self.packet_loss_counter}')
+                log('(send-ack-loop) esperando ack')
+                data, address = self.socket.recvfrom(self.buffer_size)
+                log(f'(send-ack-loop) recibimos de: {address}')
+                ack_sequence_number, ack_expected_seq_number = struct.unpack('II', data[:8])
+                self.expected_sequence_num += 1
+                self.sequence_number += 1
+                break
             except socket.timeout:
                 log('(send-ack-loop) Timeout! Reenviando')
                 self.socket.sendto(packet, self.address)
@@ -86,12 +73,3 @@ class UDPSocketSnW:
         log(f'(bind): {address}')
         self.socket.bind(address)
 
-    def close(self):
-        raise Exception
-        log('close')
-        self.send()
-        self.recieve()
-        if self.bit_ACK == 1 and self.bit_FIN == 1:
-            self.send()
-        else:
-            print('falla algo en la comunicacion de cierre')

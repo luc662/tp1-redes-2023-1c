@@ -32,6 +32,8 @@ class ClientThread:
             self.operacion[operacion](params)
         else: 
             raise Exception
+        
+        self.cerrar()
     
     def download(self, parametros):
         logCT('download')
@@ -50,6 +52,7 @@ class ClientThread:
                 bytes = archivo.read(self.socket.buffer_size-self.socket.header_size)
                 self.socket.send(bytes)
                 logCT('Enviado')
+        logCT('fin download')
 
     def cerrar(self):
         logCT('cerrar')
@@ -64,8 +67,10 @@ class ClientThread:
 
         while True:
             mensaje, address = self.socket.recieve()
-            if mensaje and mensaje.decode() != 'ACK':
+            if mensaje and mensaje.decode() == 'ACK':
                 break
+
+        logCT('fin client thread')
 
     def upload(self, parametros):
         logCT('upload')
@@ -81,13 +86,11 @@ class ClientThread:
             while i < iters:
                 logCT(f'Recibiendo paquete {i+1}/{iters}')
                 mensaje, address = self.socket.recieve()
-                logCT(f'Recibimos {mensaje, address}')
                 if mensaje:
                     i += 1
                     archivo.write(mensaje)
 
         logCT('fin upload')
-        self.cerrar()
 
 class Server:
 
