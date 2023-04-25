@@ -10,13 +10,20 @@ from UDPSocketSelectiveRepeat import UDPSocketSelectiveRepeat as UDPSocket
 def log(msg):
     db(f'[Client] {msg}')
 
+
 class Upload:
-    def __init__(self):
-        log('(start)')
-        self.server_address = "10.0.0.1"
-        self.server_port = 2001
+
+    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt', path='/.'):
+        log('start')
+
+
+        self.server_address = server_ip
+        self.server_port = server_port
+        log((self.server_address, self.server_port))
         self.socket = UDPSocket((self.server_address, self.server_port))
-        log('Socket creado')
+        self.filename = filename
+        self.path = path
+        return
         self.run()
 
     def run(self):
@@ -50,11 +57,8 @@ class Upload:
 
         log('Continuamos en el upload')
 
-        with open(nombre_archivo, 'rb') as archivo:
+        with open(self.path + nombre_archivo, 'rb') as archivo:
             log(f'Abriendo archivo: {nombre_archivo}')
-            # esto lo movemos un paso mas adentro al socket
-            header_size = 8
-            iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
             self.socket.enviar_archivo(tamanio_archivo, archivo)
 
             log('Cerrar archivo')
@@ -63,5 +67,3 @@ class Upload:
         log('Comenzamos cierre de conexion')
 
         print('Fin del cliente')
-
-Upload()

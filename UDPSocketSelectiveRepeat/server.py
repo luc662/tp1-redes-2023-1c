@@ -17,14 +17,15 @@ def log(msg):
     db(f'[Server] {msg}')
 
 class ClientThread:
-    def __init__(self, socket, operacion, params):
+    def __init__(self, socket, operacion, path, params):
         logCT('start')
         self.thread = threading.Thread(target=self.run, args=[operacion, params])
         self.socket = socket
+        self.path = path
         ip = self.socket.address[0]
         port = self.socket.address[1]
         self.operacion = {
-            'upload': self.upload, 
+            'upload': self.upload,
             'download': self.download
         }
         logCT(f'Nuevo cliente en {ip}:{port}')
@@ -48,8 +49,8 @@ class ClientThread:
         logCT(f'El tamanio del archivo es: {tamanio_archivo}')
         logCT(f'Armando mensaje de capa de app:')
 
-        with open(nombre_archivo, 'rb') as archivo:
-            logCT(f'Abriendo archivo: {nombre_archivo}')
+        with open(self.path+nombre_archivo, 'rb') as archivo:
+            logCT(f'Abriendo archivo: {self.path+nombre_archivo}')
             # esto lo movemos un paso mas adentro al socket
             header_size = 8
             iters = ceil(tamanio_archivo / (self.socket.buffer_size - header_size))
@@ -91,7 +92,7 @@ class ClientThread:
             return
 
         logCT('Esperamos recibir mas datos:')
-        with open(f'server_{nombre_archivo}', 'wb') as archivo:
+        with open(f'{self.path+nombre_archivo}', 'wb') as archivo:
             iters = ceil(int(tamanio_archivo) / (self.socket.buffer_size - 8))
 
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(tamanio_archivo) / (self.socket.buffer_size - 8)))
@@ -124,14 +125,13 @@ class ClientThread:
 
 class Server:
 
-    def __init__(self):
+    def __init__(self, ip, port, path='./'):
         log('start')
-        UDP_IP = '10.0.0.1'
-        UDP_PORT = 2001
 
         self.socket = UDPSocket(None)
-        self.socket.bind((UDP_IP, UDP_PORT))
+        self.socket.bind((ip, port))
         self.threads = {}
+        self.path = path
 
         self.run()
 
@@ -173,7 +173,7 @@ class Server:
             params = [nombre_archivo]
 
         log('Iniciando thread')
-        client = ClientThread(client_socket, tipo_operacion, params)
+        client = ClientThread(client_socket, tipo_operacion, path , params)
         self.threads[address] = client
         log('Iniciado')
 
@@ -185,5 +185,3 @@ class Server:
 
         self.cerrar()
         log('Fin')
-
-Server()

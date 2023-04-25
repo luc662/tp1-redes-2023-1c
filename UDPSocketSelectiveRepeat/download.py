@@ -13,12 +13,14 @@ def log(msg):
 
 
 class Download:
-    def __init__(self):
-        log('(start)')
-        self.server_address = "10.0.0.1"
-        self.server_port = 2001
+
+    def __init__(self, server_ip="10.0.0.1", server_port=2001, filename='server_test.txt', path='/.'):
+        log('start')
+        self.server_address = server_ip
+        self.server_port = server_port
         self.socket = UDPSocket((self.server_address, self.server_port))
-        log('Socket creado')
+        self.filename = filename
+        self.path = path
         self.run()
 
     def run(self):
@@ -51,7 +53,7 @@ class Download:
 
         log('Continuamos en el upload')
 
-        with open(f'client_{nombre_archivo}', 'wb') as archivo:
+        with open(f'{self.path+nombre_archivo}', 'wb') as archivo:
             iters = ceil(int(filesize) / (self.socket.buffer_size - 8))
 
             ordenadorDePaquetes = OrdenadorDePaquetes(ceil(int(filesize) / (self.socket.buffer_size - 8)))
@@ -59,6 +61,7 @@ class Download:
             while not ordenadorDePaquetes.is_full():
                 log(f'Recibiendo... {ordenadorDePaquetes.blocks_occupied}/{ordenadorDePaquetes.blocks}')
                 mensaje, address, seq_number = self.socket.receive()
+                #fix para evitar escribir encabezado si fallaba en llegar el ack al servidor
                 if mensaje and 'CONECTADO|' in mensaje.decode():
                     log('el cliente volvió a recibir CONECTADO\nenviando ACK')
                     import struct
@@ -71,7 +74,6 @@ class Download:
                     log(f'De: {address}')
                     log(f'Tamanio: {len(mensaje)}')
                     log(f'seq_number: {seq_number}')
-                    # cuando reinciemos los seq_number, sacar el -1
                     ordenadorDePaquetes.add(seq_number - 1, mensaje)
 
             while True:
